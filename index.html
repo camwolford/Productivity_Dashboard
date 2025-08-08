@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campbell's Productivity Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header class="dashboard-header">
+    <h1><i class="fas fa-chart-line"></i> Campbell's Productivity Dashboard</h1>
+    <div class="header-actions">
+      <button id="add-project-btn" class="primary-btn">
+        <i class="fas fa-plus"></i> New Project
+      </button>
+      <button id="view-toggle" class="secondary-btn">
+        <i class="fas fa-th-large"></i> Board View
+      </button>
+      <button id="focus-toggle" class="secondary-btn">
+        <i class="fas fa-bullseye"></i> Focus Mode
+      </button>
+      <button id="stats-toggle" class="secondary-btn">
+        <i class="fas fa-chart-bar"></i> Stats
+      </button>
+    </div>
+  </header>
+
+  <div class="dashboard-container">
+    <!-- Project View -->
+    <div id="project-view" class="view-container active">
+      <div class="projects-grid" id="projects-container">
+        <!-- Projects will be dynamically inserted here -->
+      </div>
+    </div>
+
+    <!-- Board View -->
+    <div id="board-view" class="view-container">
+      <div class="boards-container">
+        <section id="execution" class="board">
+          <div class="board-header">
+            <h2><i class="fas fa-rocket"></i> Execution Board</h2>
+            <span class="task-count" id="exec-count">0</span>
+          </div>
+          <div class="board-content">
+            <ul id="execution-list" class="task-list"></ul>
+            <button id="add-exec" class="add-task-btn">
+              <i class="fas fa-plus"></i> Add Task
+            </button>
+          </div>
+        </section>
+        <section id="incubation" class="board">
+          <div class="board-header">
+            <h2><i class="fas fa-lightbulb"></i> Incubation Board</h2>
+            <span class="task-count" id="incub-count">0</span>
+          </div>
+          <div class="board-content">
+            <ul id="incubation-list" class="task-list"></ul>
+            <button id="add-incub" class="add-task-btn">
+              <i class="fas fa-plus"></i> Add Task
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Focus View -->
+    <div id="focus-view" class="view-container">
+      <div class="focus-header">
+        <h2><i class="fas fa-bullseye"></i> Today's Focus</h2>
+        <div class="focus-stats">
+          <div class="stat-item">
+            <span class="stat-number" id="completed-today">0</span>
+            <span class="stat-label">Completed Today</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="time-today">0h</span>
+            <span class="stat-label">Time Logged</span>
+          </div>
+        </div>
+      </div>
+      <div class="focus-content">
+        <div class="focus-section">
+          <h3><i class="fas fa-exclamation-triangle"></i> Overdue Tasks</h3>
+          <div id="overdue-tasks" class="focus-tasks"></div>
+        </div>
+        <div class="focus-section">
+          <h3><i class="fas fa-calendar-day"></i> Due Today</h3>
+          <div id="due-today-tasks" class="focus-tasks"></div>
+        </div>
+        <div class="focus-section">
+          <h3><i class="fas fa-star"></i> High Priority</h3>
+          <div id="high-priority-tasks" class="focus-tasks"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="stats-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Productivity Statistics</h3>
+          <button class="close-btn" id="close-stats">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="total-projects">0</div>
+              <div class="stat-title">Total Projects</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="completed-tasks">0</div>
+              <div class="stat-title">Completed Tasks</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="completion-rate">0%</div>
+              <div class="stat-title">Completion Rate</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="streak-days">0</div>
+              <div class="stat-title">Streak Days</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for adding/editing projects and tasks -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Add New Project</h3>
+        <button class="close-btn" id="close-modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="project-form">
+          <div class="form-group">
+            <label for="project-name">Project Name</label>
+            <input type="text" id="project-name" placeholder="Enter project name..." required>
+          </div>
+          <div class="form-group">
+            <label for="project-description">Description (Optional)</label>
+            <textarea id="project-description" placeholder="Brief project description..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="project-priority">Priority</label>
+            <select id="project-priority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="project-status">Status</label>
+            <select id="project-status">
+              <option value="execution" selected>Execution</option>
+              <option value="incubation">Incubation</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="project-due-date">Due Date (Optional)</label>
+            <input type="date" id="project-due-date">
+          </div>
+          <div class="form-group">
+            <label for="project-estimated-time">Estimated Time (hours)</label>
+            <input type="number" id="project-estimated-time" step="0.5" min="0" placeholder="0">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="secondary-btn" id="cancel-btn">Cancel</button>
+        <button type="submit" form="project-form" class="primary-btn" id="save-btn">Save Project</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

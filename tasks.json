@@ -1,0 +1,321 @@
+{
+  "projects": {
+    "project_1": {
+      "id": "project_1",
+      "name": "Daily Tasks",
+      "description": "Regular daily activities and maintenance tasks",
+      "priority": "high",
+      "status": "execution",
+      "dueDate": "2025-08-08",
+      "estimatedTime": 2,
+      "actualTime": 0,
+      "createdAt": "2025-08-08T00:00:00.000Z",
+      "updatedAt": "2025-08-08T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "task_1",
+          "description": "Feedly",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "dueDate": "2025-08-08",
+          "estimatedTime": 0.5,
+          "actualTime": 0,
+          "subtasks": []
+        },
+        {
+          "id": "task_2",
+          "description": "Research Flat Laws",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "dueDate": "2025-08-08",
+          "estimatedTime": 1,
+          "actualTime": 0,
+          "subtasks": []
+        },
+        {
+          "id": "task_3",
+          "description": "Rebalance Portfolio",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        }
+      ]
+    },
+    "project_2": {
+      "id": "project_2",
+      "name": "First Year Report",
+      "description": "Complete and improve first year research report - understand multi-omic connections through genetics",
+      "priority": "high",
+      "status": "execution",
+      "dueDate": "2025-08-15",
+      "estimatedTime": 40,
+      "actualTime": 0,
+      "createdAt": "2025-08-08T00:00:00.000Z",
+      "updatedAt": "2025-08-08T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "task_4",
+          "description": "Results Figures and Tables",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "dueDate": "2025-08-12",
+          "estimatedTime": 15,
+          "actualTime": 0,
+          "subtasks": [
+            {
+              "id": "subtask_1",
+              "description": "Fix Figure 2",
+              "completed": false
+            },
+            {
+              "id": "subtask_2", 
+              "description": "Continue with remaining figures",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "id": "task_5",
+          "description": "Improve Presentation Dramatically",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": [
+            {
+              "id": "subtask_3",
+              "description": "Tie it all together more, need to really work on this",
+              "completed": false
+            },
+            {
+              "id": "subtask_4",
+              "description": "Shorten all of the fluff",
+              "completed": false
+            },
+            {
+              "id": "subtask_5",
+              "description": "Less is more in every sentence",
+              "completed": false
+            },
+            {
+              "id": "subtask_6",
+              "description": "Rewrite all first sentences",
+              "completed": false
+            },
+            {
+              "id": "subtask_7",
+              "description": "One thought per sentence",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "id": "task_6",
+          "description": "Comb through first-year report for consistency",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        }
+      ]
+    },
+    "project_3": {
+      "id": "project_3",
+      "name": "Shared Genetic Determinants",
+      "description": "WebServer development for genetic analysis platform",
+      "priority": "medium",
+      "status": "execution",
+      "dueDate": "2025-08-20",
+      "estimatedTime": 25,
+      "actualTime": 0,
+      "createdAt": "2025-08-08T00:00:00.000Z",
+      "updatedAt": "2025-08-08T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "task_7",
+          "description": "Make WebServer",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": [
+            {
+              "id": "subtask_8",
+              "description": "Format the idea into a word doc with help from GPT-5",
+              "completed": false
+            },
+            {
+              "id": "subtask_9",
+              "description": "Make Claude Artefacts for each page",
+              "completed": false
+            },
+            {
+              "id": "subtask_10",
+              "description": "Use Claude Code to connect",
+              "completed": false
+            }
+          ]
+        }
+      ]
+    },
+    "project_4": {
+      "id": "project_4",
+      "name": "Homo sAIpien",
+      "description": "Follow remaining plan for Homo sAIpien project",
+      "priority": "medium",
+      "status": "execution",
+      "createdAt": "2025-08-08T00:00:00.000Z",
+      "updatedAt": "2025-08-08T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "task_8",
+          "description": "Follow the rest of the plan for homo sAIpien",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        }
+      ]
+    },
+    "project_5": {
+      "id": "project_5",
+      "name": "First Year Report (Extended)",
+      "description": "Additional improvements and refinements for comprehensive report",
+      "priority": "medium",
+      "status": "incubation",
+      "createdAt": "2025-08-08T00:00:00.000Z",
+      "updatedAt": "2025-08-08T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "task_9",
+          "description": "Finish Content",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_10",
+          "description": "Trim report length",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_11",
+          "description": "Rephrase to focus on genomics as pathway to multiomics resource",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_12",
+          "description": "Rename all titles and first sentences",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_13",
+          "description": "Remove American z's and Supplementals",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_14",
+          "description": "Send to Adam and Scott",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        }
+      ]
+    },
+    "project_6": {
+      "id": "project_6",
+      "name": "Peter",
+      "description": "Business and startup related tasks",
+      "priority": "low",
+      "status": "incubation",
+      "createdAt": "2025-08-08T00:00:00.000Z",
+      "updatedAt": "2025-08-08T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "task_15",
+          "description": "Go through new files",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_16",
+          "description": "Investigate device monitoring tech options",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": [
+            {
+              "id": "subtask_11",
+              "description": "Check SharePoint for initial doc",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "id": "task_17",
+          "description": "Look at NatWest Competition",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_18",
+          "description": "Think about Advisory Board",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_19",
+          "description": "Website Development",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": [
+            {
+              "id": "subtask_12",
+              "description": "Update with company details",
+              "completed": false
+            },
+            {
+              "id": "subtask_13",
+              "description": "Host and upload the website",
+              "completed": false
+            },
+            {
+              "id": "subtask_14",
+              "description": "Set it live",
+              "completed": false
+            }
+          ]
+        }
+      ]
+    },
+    "project_7": {
+      "id": "project_7",
+      "name": "Metabolome-wide MR",
+      "description": "Research paper improvements and analysis updates",
+      "priority": "low",
+      "status": "incubation",
+      "createdAt": "2025-08-08T00:00:00.000Z",
+      "updatedAt": "2025-08-08T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "task_20",
+          "description": "Add results from referenced paper to metabolome-wide MR",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        },
+        {
+          "id": "task_21",
+          "description": "Add proxied IVs to PwCoCo analysis in manuscript",
+          "completed": false,
+          "createdAt": "2025-08-08T00:00:00.000Z",
+          "subtasks": []
+        }
+      ]
+    }
+  }
+}
