@@ -824,3 +824,124 @@ body {
     gap: 0.5rem;
   }
 }
+
+/* Drag and Drop Styles */
+.task-item, .subtask-item {
+  cursor: grab;
+  transition: all 0.3s ease;
+}
+
+.task-item:active, .subtask-item:active {
+  cursor: grabbing;
+}
+
+.task-item.dragging, .subtask-item.dragging {
+  opacity: 0.5;
+  transform: scale(1.05);
+  z-index: 1000;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.drop-zone {
+  position: relative;
+}
+
+.drop-zone.drag-over {
+  background: rgba(102, 126, 234, 0.1);
+  border: 2px dashed #667eea;
+  border-radius: 8px;
+}
+
+.drop-indicator {
+  height: 3px;
+  background: #667eea;
+  border-radius: 2px;
+  margin: 4px 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.drop-indicator.show {
+  opacity: 1;
+}
+
+.project-card.drag-over {
+  background: rgba(102, 126, 234, 0.05);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+.board.drag-over {
+  background: rgba(102, 126, 234, 0.05);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+.task-item.drag-disabled, .subtask-item.drag-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Task Action Button Improvements */
+.task-actions button {
+  background: none;
+  border: none;
+  color: #7f8c8d;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.task-actions button:hover {
+  opacity: 1;
+  background: rgba(108, 117, 125, 0.1);
+}
+
+.task-actions button[title*="Edit"] {
+  color: #667eea;
+}
+
+.task-actions button[title*="Delete"] {
+  color: #e74c3c;
+}
+
+.task-actions button[title*="Add"] {
+  color: #27ae60;
+}
+
+.task-item:hover .task-actions,
+.subtask-item:hover .task-actions {
+  opacity: 1;
+}
+
+.task-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.subtask-item .task-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+/* Double-click indicator */
+.task-text[style*="cursor: text"] {
+  position: relative;
+}
+
+.task-text[style*="cursor: text"]:hover::after {
+  content: "Double-click to edit";
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+}

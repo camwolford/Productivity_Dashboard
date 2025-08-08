@@ -248,6 +248,22 @@ function toggleTask(projectId, taskId) {
   }
 }
 
+function editTask(projectId, taskId) {
+  const project = projects[projectId];
+  if (project) {
+    const task = project.tasks.find(t => t.id === taskId);
+    if (task) {
+      const newDescription = prompt('Edit task description:', task.description);
+      if (newDescription && newDescription.trim() !== task.description) {
+        task.description = newDescription.trim();
+        project.updatedAt = new Date().toISOString();
+        saveState();
+        updateDisplay();
+      }
+    }
+  }
+}
+
 function deleteTask(projectId, taskId) {
   const project = projects[projectId];
   if (project) {
@@ -274,6 +290,38 @@ function addSubtask(projectId, taskId) {
         estimatedTime: 0,
         actualTime: 0
       });
+      project.updatedAt = new Date().toISOString();
+      saveState();
+      updateDisplay();
+    }
+  }
+}
+
+function editSubtask(projectId, taskId, subtaskId) {
+  const project = projects[projectId];
+  if (project) {
+    const task = project.tasks.find(t => t.id === taskId);
+    if (task) {
+      const subtask = task.subtasks.find(st => st.id === subtaskId);
+      if (subtask) {
+        const newDescription = prompt('Edit subtask description:', subtask.description);
+        if (newDescription && newDescription.trim() !== subtask.description) {
+          subtask.description = newDescription.trim();
+          project.updatedAt = new Date().toISOString();
+          saveState();
+          updateDisplay();
+        }
+      }
+    }
+  }
+}
+
+function deleteSubtask(projectId, taskId, subtaskId) {
+  const project = projects[projectId];
+  if (project) {
+    const task = project.tasks.find(t => t.id === taskId);
+    if (task) {
+      task.subtasks = task.subtasks.filter(st => st.id !== subtaskId);
       project.updatedAt = new Date().toISOString();
       saveState();
       updateDisplay();
@@ -316,7 +364,7 @@ function renderProjects() {
 
 function createProjectCard(project) {
   const card = document.createElement('div');
-  card.className = 'project-card';
+  card.className = 'project-card drop-zone';
   
   const completedTasks = project.tasks.filter(task => task.completed).length;
   const totalTasks = project.tasks.length;
@@ -350,28 +398,8 @@ function createProjectCard(project) {
       <div class="progress-fill" style="width: ${progress}%"></div>
     </div>
     
-    <div class="task-list">
-      ${project.tasks.map(task => `
-        <div class="task-item ${task.completed ? 'completed' : ''}">
-          <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
-                 onchange="toggleTask('${project.id}', '${task.id}')">
-          <span class="task-text">${escapeHtml(task.description)}</span>
-          <div class="task-actions">
-            <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask">
-              <i class="fas fa-plus"></i>
-            </button>
-            <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </div>
-        ${task.subtasks ? task.subtasks.map(subtask => `
-          <div class="subtask-item ${subtask.completed ? 'completed' : ''}">
-            <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''}>
-            <span class="task-text">└ ${escapeHtml(subtask.description)}</span>
-          </div>
-        `).join('') : ''}
-      `).join('')}
+    <div class="task-list drop-zone">
+      ${project.tasks.map(task => createTaskHTML(project, task)).join('')}
     </div>
     
     <div class="project-actions">
@@ -390,7 +418,90 @@ function createProjectCard(project) {
     </div>
   `;
   
+  // Set up drag and drop for the project card
+  makeDropZone(card, 'project', { projectId: project.id });
+  
+  // Set up drag and drop for all task and subtask elements after DOM is created
+  setTimeout(() => setupTaskDragDrop(card, project), 0);
+  
   return card;
+}
+
+function createTaskHTML(project, task) {
+  return `
+    <div class="task-item drop-zone ${task.completed ? 'completed' : ''}" 
+         data-task-id="${task.id}" data-project-id="${project.id}">
+      <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
+             onchange="toggleTask('${project.id}', '${task.id}')">
+      <span class="task-text">${escapeHtml(task.description)}</span>
+      <div class="task-actions">
+        <button onclick="editTask('${project.id}', '${task.id}')" title="Edit task">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask">
+          <i class="fas fa-plus"></i>
+        </button>
+        <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+    ${task.subtasks ? task.subtasks.map(subtask => `
+      <div class="subtask-item drop-zone ${subtask.completed ? 'completed' : ''}" 
+           data-subtask-id="${subtask.id}" data-task-id="${task.id}" data-project-id="${project.id}">
+        <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''}>
+        <span class="task-text">└ ${escapeHtml(subtask.description)}</span>
+        <div class="task-actions">
+          <button onclick="editSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Edit subtask">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button onclick="deleteSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Delete subtask">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('') : ''}
+  `;
+}
+
+function setupTaskDragDrop(cardElement, project) {
+  // Set up draggable tasks
+  cardElement.querySelectorAll('.task-item').forEach(taskElement => {
+    const taskId = taskElement.dataset.taskId;
+    const projectId = taskElement.dataset.projectId;
+    
+    if (taskId && projectId) {
+      makeDraggable(taskElement, 'task', { taskId, projectId });
+      makeDropZone(taskElement, 'task-position', { taskId, projectId });
+      makeDropZone(taskElement, 'task', { taskId, projectId });
+      
+      // Add double-click to edit functionality
+      const taskText = taskElement.querySelector('.task-text');
+      if (taskText) {
+        taskText.addEventListener('dblclick', () => editTask(projectId, taskId));
+        taskText.style.cursor = 'text';
+      }
+    }
+  });
+  
+  // Set up draggable subtasks
+  cardElement.querySelectorAll('.subtask-item').forEach(subtaskElement => {
+    const subtaskId = subtaskElement.dataset.subtaskId;
+    const taskId = subtaskElement.dataset.taskId;
+    const projectId = subtaskElement.dataset.projectId;
+    
+    if (subtaskId && taskId && projectId) {
+      makeDraggable(subtaskElement, 'subtask', { subtaskId, taskId, projectId });
+      makeDropZone(subtaskElement, 'subtask-position', { subtaskId, taskId, projectId });
+      
+      // Add double-click to edit functionality
+      const subtaskText = subtaskElement.querySelector('.task-text');
+      if (subtaskText) {
+        subtaskText.addEventListener('dblclick', () => editSubtask(projectId, taskId, subtaskId));
+        subtaskText.style.cursor = 'text';
+      }
+    }
+  });
 }
 
 function renderBoards() {
@@ -414,6 +525,13 @@ function renderBoards() {
     });
   });
   
+  // Set up board drop zones
+  makeDropZone(executionBoard, 'board', { status: 'execution' });
+  makeDropZone(incubationBoard, 'board', { status: 'incubation' });
+  
+  // Set up task drag and drop for board view
+  setTimeout(() => setupBoardDragDrop(), 0);
+  
   // Update counters
   document.getElementById('exec-count').textContent = execCount;
   document.getElementById('incub-count').textContent = incubCount;
@@ -421,7 +539,9 @@ function renderBoards() {
 
 function createTaskElement(project, task) {
   const li = document.createElement('li');
-  li.className = `task-item ${task.completed ? 'completed' : ''}`;
+  li.className = `task-item drop-zone ${task.completed ? 'completed' : ''}`;
+  li.setAttribute('data-task-id', task.id);
+  li.setAttribute('data-project-id', project.id);
   
   li.innerHTML = `
     <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
@@ -429,6 +549,9 @@ function createTaskElement(project, task) {
     <span class="task-text">${escapeHtml(task.description)}</span>
     <span class="task-project">${escapeHtml(project.name)}</span>
     <div class="task-actions">
+      <button onclick="editTask('${project.id}', '${task.id}')" title="Edit task">
+        <i class="fas fa-edit"></i>
+      </button>
       <button onclick="moveProject('${project.id}')" title="Move project">
         <i class="fas fa-exchange-alt"></i>
       </button>
@@ -439,6 +562,26 @@ function createTaskElement(project, task) {
   `;
   
   return li;
+}
+
+function setupBoardDragDrop() {
+  // Set up draggable tasks in board view
+  document.querySelectorAll('#execution-list .task-item, #incubation-list .task-item').forEach(taskElement => {
+    const taskId = taskElement.dataset.taskId;
+    const projectId = taskElement.dataset.projectId;
+    
+    if (taskId && projectId) {
+      makeDraggable(taskElement, 'task', { taskId, projectId });
+      makeDropZone(taskElement, 'task-position', { taskId, projectId });
+      
+      // Add double-click to edit functionality
+      const taskText = taskElement.querySelector('.task-text');
+      if (taskText) {
+        taskText.addEventListener('dblclick', () => editTask(projectId, taskId));
+        taskText.style.cursor = 'text';
+      }
+    }
+  });
 }
 
 // State Management
@@ -872,6 +1015,237 @@ function getDueDateStatus(dueDate) {
   if (dueDate < today) return 'overdue';
   if (dueDate === today) return 'due-today';
   return 'upcoming';
+}
+
+// Drag and Drop State
+let dragState = {
+  draggedElement: null,
+  draggedData: null,
+  dragType: null, // 'task' or 'subtask'
+  sourceProject: null,
+  sourceTask: null
+};
+
+// Drag and Drop Functions
+function makeDraggable(element, type, data) {
+  element.draggable = true;
+  element.addEventListener('dragstart', (e) => handleDragStart(e, type, data));
+  element.addEventListener('dragend', handleDragEnd);
+}
+
+function makeDropZone(element, type, targetData) {
+  element.addEventListener('dragover', handleDragOver);
+  element.addEventListener('dragenter', handleDragEnter);
+  element.addEventListener('dragleave', handleDragLeave);
+  element.addEventListener('drop', (e) => handleDrop(e, type, targetData));
+}
+
+function handleDragStart(e, type, data) {
+  dragState.draggedElement = e.target;
+  dragState.dragType = type;
+  dragState.draggedData = data;
+  
+  if (type === 'task') {
+    dragState.sourceProject = data.projectId;
+  } else if (type === 'subtask') {
+    dragState.sourceProject = data.projectId;
+    dragState.sourceTask = data.taskId;
+  }
+  
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', '');
+}
+
+function handleDragEnd(e) {
+  e.target.classList.remove('dragging');
+  clearDropIndicators();
+  clearDragOverStyles();
+  resetDragState();
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+  if (canDrop(e.currentTarget)) {
+    e.currentTarget.classList.add('drag-over');
+  }
+}
+
+function handleDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+}
+
+function handleDrop(e, type, targetData) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  
+  if (!canDrop(e.currentTarget) || !dragState.draggedData) return;
+  
+  const dropSuccess = performDrop(type, targetData);
+  if (dropSuccess) {
+    saveState();
+    updateDisplay();
+  }
+}
+
+function canDrop(dropTarget) {
+  if (!dragState.draggedData) return false;
+  
+  // Prevent dropping on self or invalid targets
+  if (dropTarget === dragState.draggedElement) return false;
+  
+  return true;
+}
+
+function performDrop(targetType, targetData) {
+  const { dragType, draggedData } = dragState;
+  
+  if (dragType === 'task' && targetType === 'project') {
+    return moveTaskToProject(draggedData, targetData.projectId);
+  } else if (dragType === 'task' && targetType === 'task-position') {
+    return moveTaskToPosition(draggedData, targetData);
+  } else if (dragType === 'task' && targetType === 'board') {
+    return moveTaskToBoard(draggedData, targetData.status);
+  } else if (dragType === 'subtask' && targetType === 'task') {
+    return moveSubtaskToTask(draggedData, targetData);
+  } else if (dragType === 'subtask' && targetType === 'subtask-position') {
+    return moveSubtaskToPosition(draggedData, targetData);
+  }
+  
+  return false;
+}
+
+function moveTaskToProject(taskData, targetProjectId) {
+  const sourceProject = projects[taskData.projectId];
+  const targetProject = projects[targetProjectId];
+  
+  if (!sourceProject || !targetProject || taskData.projectId === targetProjectId) {
+    return false;
+  }
+  
+  // Find and remove task from source project
+  const taskIndex = sourceProject.tasks.findIndex(t => t.id === taskData.taskId);
+  if (taskIndex === -1) return false;
+  
+  const task = sourceProject.tasks.splice(taskIndex, 1)[0];
+  
+  // Add task to target project
+  targetProject.tasks.push(task);
+  
+  // Update timestamps
+  sourceProject.updatedAt = new Date().toISOString();
+  targetProject.updatedAt = new Date().toISOString();
+  
+  return true;
+}
+
+function moveTaskToPosition(taskData, targetData) {
+  const project = projects[targetData.projectId];
+  if (!project) return false;
+  
+  const taskIndex = project.tasks.findIndex(t => t.id === taskData.taskId);
+  if (taskIndex === -1) return false;
+  
+  const targetIndex = project.tasks.findIndex(t => t.id === targetData.taskId);
+  if (targetIndex === -1) return false;
+  
+  // Reorder tasks within the same project
+  if (taskIndex !== targetIndex) {
+    const [task] = project.tasks.splice(taskIndex, 1);
+    project.tasks.splice(targetIndex, 0, task);
+    project.updatedAt = new Date().toISOString();
+    return true;
+  }
+  
+  return false;
+}
+
+function moveSubtaskToTask(subtaskData, targetData) {
+  const sourceProject = projects[subtaskData.projectId];
+  if (!sourceProject) return false;
+  
+  const sourceTask = sourceProject.tasks.find(t => t.id === subtaskData.taskId);
+  const targetTask = sourceProject.tasks.find(t => t.id === targetData.taskId);
+  
+  if (!sourceTask || !targetTask) return false;
+  
+  // Find and remove subtask from source task
+  const subtaskIndex = sourceTask.subtasks.findIndex(st => st.id === subtaskData.subtaskId);
+  if (subtaskIndex === -1) return false;
+  
+  const subtask = sourceTask.subtasks.splice(subtaskIndex, 1)[0];
+  
+  // Add subtask to target task
+  targetTask.subtasks.push(subtask);
+  
+  sourceProject.updatedAt = new Date().toISOString();
+  return true;
+}
+
+function moveTaskToBoard(taskData, targetStatus) {
+  const sourceProject = projects[taskData.projectId];
+  if (!sourceProject) return false;
+  
+  // Change the project status to move the task to the target board
+  if (sourceProject.status !== targetStatus) {
+    sourceProject.status = targetStatus;
+    sourceProject.updatedAt = new Date().toISOString();
+    return true;
+  }
+  
+  return false;
+}
+
+function moveSubtaskToPosition(subtaskData, targetData) {
+  const project = projects[targetData.projectId];
+  if (!project) return false;
+  
+  const task = project.tasks.find(t => t.id === targetData.taskId);
+  if (!task) return false;
+  
+  const subtaskIndex = task.subtasks.findIndex(st => st.id === subtaskData.subtaskId);
+  const targetIndex = task.subtasks.findIndex(st => st.id === targetData.subtaskId);
+  
+  if (subtaskIndex === -1 || targetIndex === -1) return false;
+  
+  // Reorder subtasks within the same task
+  if (subtaskIndex !== targetIndex) {
+    const [subtask] = task.subtasks.splice(subtaskIndex, 1);
+    task.subtasks.splice(targetIndex, 0, subtask);
+    project.updatedAt = new Date().toISOString();
+    return true;
+  }
+  
+  return false;
+}
+
+function clearDropIndicators() {
+  document.querySelectorAll('.drop-indicator').forEach(indicator => {
+    indicator.classList.remove('show');
+  });
+}
+
+function clearDragOverStyles() {
+  document.querySelectorAll('.drag-over').forEach(element => {
+    element.classList.remove('drag-over');
+  });
+}
+
+function resetDragState() {
+  dragState = {
+    draggedElement: null,
+    draggedData: null,
+    dragType: null,
+    sourceProject: null,
+    sourceTask: null
+  };
 }
 
 // Initialize the application when DOM is loaded
