@@ -6,6 +6,7 @@
   <title>Campbell's Productivity Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header class="dashboard-header">
@@ -22,6 +23,21 @@
       </button>
       <button id="stats-toggle" class="secondary-btn">
         <i class="fas fa-chart-bar"></i> Stats
+      </button>
+      <button id="archive-toggle" class="secondary-btn">
+        <i class="fas fa-archive"></i> Archive
+      </button>
+      <button id="goals-toggle" class="secondary-btn">
+        <i class="fas fa-bullseye"></i> Goals
+      </button>
+      <button id="theme-toggle" class="secondary-btn" title="Toggle dark mode">
+        <i class="fas fa-moon"></i>
+      </button>
+      <button id="undo-btn" class="secondary-btn" title="Undo (Ctrl+Z)">
+        <i class="fas fa-undo"></i>
+      </button>
+      <button id="redo-btn" class="secondary-btn" title="Redo (Ctrl+Shift+Z)">
+        <i class="fas fa-redo"></i>
       </button>
     </div>
   </header>
@@ -67,7 +83,37 @@
     <!-- Focus View -->
     <div id="focus-view" class="view-container">
       <div class="focus-header">
-        <h2><i class="fas fa-bullseye"></i> Today's Focus</h2>
+        <div class="focus-title-section">
+          <h2><i class="fas fa-bullseye"></i> Focus Mode</h2>
+          <div class="focus-timer-section">
+            <div class="focus-timer" id="focus-timer">00:00</div>
+            <div class="focus-controls">
+              <button id="pause-focus" class="timer-control-btn" title="Pause focus session">
+                <i class="fas fa-pause"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Pomodoro Timer Section -->
+        <div class="pomodoro-section" id="pomodoro-section" style="display: none;">
+          <div class="pomodoro-timer-display">
+            <div class="pomodoro-phase" id="pomodoro-phase">🍅 Ready</div>
+            <div class="pomodoro-timer" id="pomodoro-timer">25:00</div>
+            <div class="pomodoro-round" id="pomodoro-round">Round 0</div>
+          </div>
+          <div class="pomodoro-controls">
+            <button id="pause-pomodoro" class="timer-control-btn" title="Pause Pomodoro">
+              <i class="fas fa-pause"></i>
+            </button>
+            <button id="resume-pomodoro" class="timer-control-btn" title="Resume Pomodoro">
+              <i class="fas fa-play"></i>
+            </button>
+            <button id="stop-pomodoro" class="timer-control-btn" title="Stop Pomodoro">
+              <i class="fas fa-stop"></i>
+            </button>
+          </div>
+        </div>
         <div class="focus-stats">
           <div class="stat-item">
             <span class="stat-number" id="completed-today">0</span>
@@ -76,6 +122,14 @@
           <div class="stat-item">
             <span class="stat-number" id="time-today">0h</span>
             <span class="stat-label">Time Logged</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="focus-sessions-today">0</span>
+            <span class="stat-label">Focus Sessions</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="total-focus-time">0h</span>
+            <span class="stat-label">Total Focus Time</span>
           </div>
         </div>
       </div>
@@ -95,6 +149,128 @@
       </div>
     </div>
 
+    <!-- Archive View -->
+    <div id="archive-view" class="view-container">
+      <div class="archive-header">
+        <h2><i class="fas fa-archive"></i> Archive</h2>
+        <div class="archive-stats">
+          <div class="stat-item">
+            <span class="stat-number" id="archived-tasks-count">0</span>
+            <span class="stat-label">Archived Tasks</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="archived-projects-count">0</span>
+            <span class="stat-label">Archived Projects</span>
+          </div>
+        </div>
+      </div>
+      <div class="archive-content">
+        <div class="archive-section">
+          <h3><i class="fas fa-tasks"></i> Completed Tasks</h3>
+          <div id="archived-tasks-list" class="archive-tasks"></div>
+        </div>
+        <div class="archive-section">
+          <h3><i class="fas fa-folder"></i> Completed Projects</h3>
+          <div id="archived-projects-list" class="archive-projects"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Planning Assistant Modal -->
+    <div id="daily-planner-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fas fa-sun"></i> Plan Your Day</h3>
+          <button class="close-btn" id="close-planner">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="planner-intro">
+            <p>Good morning! Let's plan your day for maximum productivity. Select the tasks you want to focus on today:</p>
+          </div>
+          <div class="suggested-tasks">
+            <h4><i class="fas fa-magic"></i> Suggested Tasks</h4>
+            <div id="suggested-tasks-list" class="task-suggestions">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          <div class="planning-actions">
+            <button id="select-all-suggestions" class="secondary-btn">
+              <i class="fas fa-check-double"></i> Select All
+            </button>
+            <button id="clear-all-suggestions" class="secondary-btn">
+              <i class="fas fa-eraser"></i> Clear All
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="skip-planning" class="secondary-btn">Skip for Today</button>
+          <button id="start-day" class="primary-btn">Start My Day</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Goals Modal -->
+    <div id="goals-modal" class="modal">
+      <div class="modal-content large">
+        <div class="modal-header">
+          <h3><i class="fas fa-target"></i> Goal Tracker</h3>
+          <button class="close-btn" id="close-goals">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="goals-header">
+            <button id="add-goal-btn" class="primary-btn">
+              <i class="fas fa-plus"></i> New Goal
+            </button>
+          </div>
+          <div class="goals-grid" id="goals-container">
+            <!-- Goals will be dynamically inserted -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Goal Form Modal -->
+    <div id="goal-form-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="goal-modal-title">Create New Goal</h3>
+          <button class="close-btn" id="close-goal-form">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="goal-form">
+            <div class="form-group">
+              <label for="goal-title">Goal Title</label>
+              <input type="text" id="goal-title" placeholder="e.g., Complete PhD Report" required>
+            </div>
+            <div class="form-group">
+              <label for="goal-description">Description</label>
+              <textarea id="goal-description" placeholder="What does success look like?"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="goal-due-date">Target Date</label>
+              <input type="date" id="goal-due-date">
+            </div>
+            <div class="form-group">
+              <label>Link Tasks to This Goal</label>
+              <div id="task-selection" class="task-selection">
+                <!-- Dynamically populated with available tasks -->
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="secondary-btn" id="cancel-goal-btn">Cancel</button>
+          <button type="submit" form="goal-form" class="primary-btn" id="save-goal-btn">Save Goal</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Stats Modal -->
     <div id="stats-modal" class="modal">
       <div class="modal-content">
@@ -105,22 +281,94 @@
           </button>
         </div>
         <div class="modal-body">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value" id="total-projects">0</div>
-              <div class="stat-title">Total Projects</div>
+          <div class="stats-tabs">
+            <button class="stats-tab active" data-tab="overview">
+              <i class="fas fa-tachometer-alt"></i> Overview
+            </button>
+            <button class="stats-tab" data-tab="analytics">
+              <i class="fas fa-chart-line"></i> Analytics
+            </button>
+            <button class="stats-tab" data-tab="insights">
+              <i class="fas fa-lightbulb"></i> Insights
+            </button>
+          </div>
+          
+          <div class="stats-content">
+            <!-- Overview Tab -->
+            <div class="stats-tab-content active" id="overview-tab">
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-value" id="total-projects">0</div>
+                  <div class="stat-title">Total Projects</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value" id="completed-tasks">0</div>
+                  <div class="stat-title">Completed Tasks</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value" id="completion-rate">0%</div>
+                  <div class="stat-title">Completion Rate</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value" id="streak-days">0</div>
+                  <div class="stat-title">Streak Days</div>
+                </div>
+              </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-value" id="completed-tasks">0</div>
-              <div class="stat-title">Completed Tasks</div>
+            
+            <!-- Analytics Tab -->
+            <div class="stats-tab-content" id="analytics-tab">
+              <div class="analytics-section">
+                <h4><i class="fas fa-chart-area"></i> Time vs Output Analytics</h4>
+                <div class="chart-container">
+                  <canvas id="productivity-chart"></canvas>
+                </div>
+                <div class="chart-controls">
+                  <button id="chart-7days" class="chart-period-btn active">7 Days</button>
+                  <button id="chart-30days" class="chart-period-btn">30 Days</button>
+                  <button id="chart-90days" class="chart-period-btn">90 Days</button>
+                </div>
+              </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-value" id="completion-rate">0%</div>
-              <div class="stat-title">Completion Rate</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="streak-days">0</div>
-              <div class="stat-title">Streak Days</div>
+            
+            <!-- Insights Tab -->
+            <div class="stats-tab-content" id="insights-tab">
+              <div class="insights-section">
+                <h4><i class="fas fa-fire"></i> Incubation Heatmap</h4>
+                <p class="section-description">Visualize your idea generation patterns over time</p>
+                <div class="heatmap-container">
+                  <div class="heatmap-legend">
+                    <span>Less</span>
+                    <div class="legend-scale">
+                      <div class="legend-cell" data-level="0"></div>
+                      <div class="legend-cell" data-level="1"></div>
+                      <div class="legend-cell" data-level="2"></div>
+                      <div class="legend-cell" data-level="3"></div>
+                      <div class="legend-cell" data-level="4"></div>
+                    </div>
+                    <span>More</span>
+                  </div>
+                  <div id="incubation-heatmap" class="incubation-heatmap"></div>
+                </div>
+              </div>
+              <div class="insights-grid">
+                <div class="insight-card">
+                  <div class="insight-title">🔥 Most Productive Day</div>
+                  <div class="insight-value" id="most-productive-day">-</div>
+                </div>
+                <div class="insight-card">
+                  <div class="insight-title">⚡ Average Task Time</div>
+                  <div class="insight-value" id="avg-task-time">-</div>
+                </div>
+                <div class="insight-card">
+                  <div class="insight-title">🎯 Focus Efficiency</div>
+                  <div class="insight-value" id="focus-efficiency">-</div>
+                </div>
+                <div class="insight-card">
+                  <div class="insight-title">📈 Weekly Trend</div>
+                  <div class="insight-value" id="weekly-trend">-</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -169,6 +417,12 @@
           <div class="form-group">
             <label for="project-estimated-time">Estimated Time (hours)</label>
             <input type="number" id="project-estimated-time" step="0.5" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label for="project-parent">Parent Project (Optional)</label>
+            <select id="project-parent">
+              <option value="">None - Top Level Project</option>
+            </select>
           </div>
         </form>
       </div>
