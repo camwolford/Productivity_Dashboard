@@ -3,6 +3,8 @@ let projects = {};
 let archivedTasks = {};
 let archivedProjects = {};
 let currentView = 'project'; // 'project', 'board', 'focus', or 'archive'
+let returnToFocusMode = false; // Track if we should auto-return to focus mode
+let themeCollapsedState = {}; // Track which themes are collapsed: { themeName: boolean }
 let nextId = 1;
 let dailyStats = {
   completedToday: 0,
@@ -13,8 +15,10 @@ let dailyStats = {
 
 let focusSession = {
   isActive: false,
+  isPaused: false,
   startTime: null,
   currentTime: 0,
+  pausedTime: 0,
   totalFocusTime: 0,
   sessionsToday: 0,
   lastSessionDate: null
@@ -149,7 +153,7 @@ function setupEventListeners() {
   document.getElementById('add-incub')?.addEventListener('click', () => addLegacyTask('Incubation'));
   
   // Focus mode controls
-  document.getElementById('pause-focus')?.addEventListener('click', pauseFocusSession);
+  document.getElementById('pause-focus')?.addEventListener('click', toggleFocusPause);
   
   // Pomodoro controls
   document.getElementById('pause-pomodoro')?.addEventListener('click', pausePomodoroSession);
@@ -192,26 +196,42 @@ function setupEventListeners() {
   goalFormModal?.addEventListener('click', (e) => {
     if (e.target === goalFormModal) closeGoalFormModal();
   });
+  
+  // Page visibility API to pause focus mode when computer is closed/minimized
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+}
+
+function handleVisibilityChange() {
+  if (document.hidden && currentView === 'focus' && focusSession.isActive && !focusSession.isPaused) {
+    // Pause focus session when window is hidden (computer closed/minimized)
+    pauseFocusSession();
+    console.log('Focus session paused due to window being hidden');
+  }
 }
 
 // View Management
 function toggleView() {
   if (currentView === 'focus') {
+    // Set flag to return to focus mode after task edits
+    returnToFocusMode = true;
     stopFocusSession();
     currentView = 'project';
+  } else {
+    currentView = currentView === 'project' ? 'board' : 'project';
   }
-  currentView = currentView === 'project' ? 'board' : 'project';
   updateDisplay();
   updateViewButtons();
 }
 
 function toggleFocusView() {
   if (currentView === 'focus') {
-    // Exiting focus mode - stop the timer
+    // Exiting focus mode - stop the timer and don't auto-return
+    returnToFocusMode = false;
     stopFocusSession();
     currentView = 'project';
   } else {
-    // Entering focus mode - start the timer
+    // Entering focus mode - start the timer and clear auto-return flag
+    returnToFocusMode = false;
     currentView = 'focus';
     startFocusSession();
   }
@@ -221,6 +241,8 @@ function toggleFocusView() {
 
 function toggleArchiveView() {
   if (currentView === 'focus') {
+    // Set flag to return to focus mode after viewing archive
+    returnToFocusMode = true;
     stopFocusSession();
   }
   currentView = currentView === 'archive' ? 'project' : 'archive';
@@ -295,6 +317,7 @@ function openProjectModal(project = null) {
   const projectDescription = document.getElementById('project-description');
   const projectPriority = document.getElementById('project-priority');
   const projectStatus = document.getElementById('project-status');
+  const projectTheme = document.getElementById('project-theme');
   
   // Populate parent project dropdown
   populateParentProjectDropdown(project ? project.id : null);
@@ -305,6 +328,7 @@ function openProjectModal(project = null) {
     projectDescription.value = project.description || '';
     projectPriority.value = project.priority;
     projectStatus.value = project.status;
+    projectTheme.value = project.theme || 'General';
     document.getElementById('project-due-date').value = project.dueDate || '';
     document.getElementById('project-estimated-time').value = project.estimatedTime || '';
     document.getElementById('project-parent').value = project.parentId || '';
@@ -312,6 +336,7 @@ function openProjectModal(project = null) {
   } else {
     modalTitle.textContent = 'Add New Project';
     projectForm.reset();
+    projectTheme.value = 'General'; // Default theme for new projects
     delete projectForm.dataset.editId;
   }
   
@@ -363,6 +388,15 @@ function closeProjectModal() {
   modal.classList.remove('active');
   projectForm.reset();
   delete projectForm.dataset.editId;
+  
+  // Auto-return to focus mode if we were temporarily editing
+  if (returnToFocusMode && currentView !== 'focus') {
+    returnToFocusMode = false;
+    currentView = 'focus';
+    startFocusSession();
+    updateDisplay();
+    updateViewButtons();
+  }
 }
 
 function handleProjectSubmit(e) {
@@ -373,6 +407,7 @@ function handleProjectSubmit(e) {
     description: document.getElementById('project-description').value.trim(),
     priority: document.getElementById('project-priority').value,
     status: document.getElementById('project-status').value,
+    theme: document.getElementById('project-theme').value,
     dueDate: document.getElementById('project-due-date').value || null,
     estimatedTime: parseFloat(document.getElementById('project-estimated-time').value) || 0,
     actualTime: 0,
@@ -408,7 +443,15 @@ function handleProjectSubmit(e) {
       }
     }
     
-    projects[editId] = { ...projects[editId], ...projectData, updatedAt: new Date().toISOString() };
+    // Preserve existing project data (especially tasks) while updating with new data
+    const existingProject = projects[editId];
+    projects[editId] = { 
+      ...existingProject, 
+      ...projectData, 
+      updatedAt: new Date().toISOString(),
+      // Ensure tasks are preserved from the existing project
+      tasks: existingProject.tasks || []
+    };
     saveStateToHistory(`Updated project: ${projectData.name}`, { type: 'update', projectId: editId, oldProject });
   } else {
     // Create new project
@@ -547,6 +590,15 @@ function editTask(projectId, taskId) {
         project.updatedAt = new Date().toISOString();
         saveState();
         updateDisplay();
+        
+        // Auto-return to focus mode after editing task
+        if (returnToFocusMode && currentView !== 'focus') {
+          returnToFocusMode = false;
+          currentView = 'focus';
+          startFocusSession();
+          updateDisplay();
+          updateViewButtons();
+        }
       }
     }
   }
@@ -604,6 +656,15 @@ function editSubtask(projectId, taskId, subtaskId) {
           project.updatedAt = new Date().toISOString();
           saveState();
           updateDisplay();
+          
+          // Auto-return to focus mode after editing subtask
+          if (returnToFocusMode && currentView !== 'focus') {
+            returnToFocusMode = false;
+            currentView = 'focus';
+            startFocusSession();
+            updateDisplay();
+            updateViewButtons();
+          }
         }
       }
     }
@@ -760,24 +821,83 @@ function isProjectFullyCompleted(project) {
 function renderProjects() {
   projectsContainer.innerHTML = '';
   
-  // Render only top-level projects (projects without parents)
+  // Group projects by theme
+  const projectsByTheme = {};
   const topLevelProjects = Object.values(projects).filter(project => !project.parentId);
   
   topLevelProjects.forEach(project => {
-    renderProjectHierarchy(project, 0);
+    const theme = project.theme || 'General';
+    if (!projectsByTheme[theme]) {
+      projectsByTheme[theme] = [];
+    }
+    projectsByTheme[theme].push(project);
+  });
+  
+  // Render each theme group
+  Object.keys(projectsByTheme).sort().forEach(theme => {
+    renderThemeGroup(theme, projectsByTheme[theme]);
   });
 }
 
-function renderProjectHierarchy(project, depth) {
+function renderThemeGroup(theme, projects) {
+  const isCollapsed = themeCollapsedState[theme] || false;
+  
+  const themeContainer = document.createElement('div');
+  themeContainer.className = 'theme-group';
+  
+  const themeHeader = document.createElement('div');
+  themeHeader.className = 'theme-header';
+  themeHeader.innerHTML = `
+    <div class="theme-title" onclick="toggleTheme('${theme}')">
+      <i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}" id="theme-${theme}-icon"></i>
+      <h3>${theme}</h3>
+      <span class="theme-count">${projects.length} project${projects.length !== 1 ? 's' : ''}</span>
+    </div>
+  `;
+  
+  const themeContent = document.createElement('div');
+  themeContent.className = 'theme-content';
+  themeContent.id = `theme-${theme}-content`;
+  themeContent.style.display = isCollapsed ? 'none' : 'block';
+  
+  // Render projects in this theme
+  projects.forEach(project => {
+    renderProjectHierarchy(project, 0, themeContent);
+  });
+  
+  themeContainer.appendChild(themeHeader);
+  themeContainer.appendChild(themeContent);
+  projectsContainer.appendChild(themeContainer);
+}
+
+function toggleTheme(theme) {
+  const isCurrentlyCollapsed = themeCollapsedState[theme] || false;
+  themeCollapsedState[theme] = !isCurrentlyCollapsed;
+  
+  const content = document.getElementById(`theme-${theme}-content`);
+  const icon = document.getElementById(`theme-${theme}-icon`);
+  
+  if (themeCollapsedState[theme]) {
+    content.style.display = 'none';
+    icon.className = 'fas fa-chevron-right';
+  } else {
+    content.style.display = 'block';
+    icon.className = 'fas fa-chevron-down';
+  }
+  
+  saveState(); // Save the collapsed states
+}
+
+function renderProjectHierarchy(project, depth, container = projectsContainer) {
   const projectCard = createProjectCard(project, depth);
-  projectsContainer.appendChild(projectCard);
+  container.appendChild(projectCard);
   
   // Render child projects
   if (project.childProjects && project.childProjects.length > 0) {
     project.childProjects.forEach(childId => {
       const childProject = projects[childId];
       if (childProject) {
-        renderProjectHierarchy(childProject, depth + 1);
+        renderProjectHierarchy(childProject, depth + 1, container);
       }
     });
   }
@@ -1025,6 +1145,7 @@ function saveState() {
   localStorage.setItem('productivity_projects', JSON.stringify(projects));
   localStorage.setItem('productivity_archived_tasks', JSON.stringify(archivedTasks));
   localStorage.setItem('productivity_archived_projects', JSON.stringify(archivedProjects));
+  localStorage.setItem('productivity_theme_states', JSON.stringify(themeCollapsedState));
   localStorage.setItem('productivity_nextId', nextId.toString());
 }
 
@@ -1034,11 +1155,13 @@ function loadState() {
   const savedArchivedTasks = localStorage.getItem('productivity_archived_tasks');
   const savedArchivedProjects = localStorage.getItem('productivity_archived_projects');
   const savedNextId = localStorage.getItem('productivity_nextId');
+  const savedThemeStates = localStorage.getItem('productivity_theme_states');
   
   if (savedProjects) {
     projects = JSON.parse(savedProjects);
     archivedTasks = savedArchivedTasks ? JSON.parse(savedArchivedTasks) : {};
     archivedProjects = savedArchivedProjects ? JSON.parse(savedArchivedProjects) : {};
+    themeCollapsedState = savedThemeStates ? JSON.parse(savedThemeStates) : {};
     nextId = parseInt(savedNextId) || 1;
     migrateProjectsForNesting();
   } else {
@@ -1057,6 +1180,10 @@ function migrateProjectsForNesting() {
     }
     if (!project.hasOwnProperty('parentId')) {
       project.parentId = null;
+      needsSave = true;
+    }
+    if (!project.hasOwnProperty('theme')) {
+      project.theme = 'General'; // Default theme for existing projects
       needsSave = true;
     }
   });
@@ -1273,7 +1400,7 @@ function renderFocusView() {
   const today = new Date().toISOString().split('T')[0];
   const overdueTasks = [];
   const dueTodayTasks = [];
-  const highPriorityTasks = [];
+  const executionBoardTasks = [];
   
   Object.values(projects).forEach(project => {
     project.tasks.forEach(task => {
@@ -1287,25 +1414,28 @@ function renderFocusView() {
       else if (task.dueDate === today) {
         dueTodayTasks.push({ ...task, projectName: project.name, projectId: project.id });
       }
-      // Check if task is high priority and in execution
-      if (project.priority === 'high' && project.status === 'execution') {
-        highPriorityTasks.push({ ...task, projectName: project.name, projectId: project.id });
+      // Check if task is in execution board
+      if (project.status === 'execution') {
+        executionBoardTasks.push({ ...task, projectName: project.name, projectId: project.id });
       }
     });
   });
   
   document.getElementById('overdue-tasks').innerHTML = renderFocusTasks(overdueTasks, 'overdue');
   document.getElementById('due-today-tasks').innerHTML = renderFocusTasks(dueTodayTasks, 'due-today');
-  document.getElementById('high-priority-tasks').innerHTML = renderFocusTasks(highPriorityTasks.slice(0, 5), 'high-priority');
+  document.getElementById('high-priority-tasks').innerHTML = renderFocusTasks(executionBoardTasks, 'execution-board');
   
   updateFocusStats();
   
   // Update timer displays
-  if (focusSession.isActive) {
+  if (focusSession.isActive || focusSession.isPaused) {
     updateFocusTimer();
   } else {
     document.getElementById('focus-timer').textContent = '00:00';
   }
+  
+  // Update pause button state
+  updateFocusPauseButton();
   
   // Show/hide Pomodoro section based on active session
   const pomodoroSection = document.getElementById('pomodoro-section');
@@ -1578,8 +1708,13 @@ function startFocusSession() {
   if (focusSession.isActive) return;
   
   focusSession.isActive = true;
+  focusSession.isPaused = false;
   focusSession.startTime = Date.now();
-  focusSession.currentTime = 0;
+  
+  // If not resuming from pause, reset the time
+  if (focusSession.pausedTime === 0) {
+    focusSession.currentTime = 0;
+  }
   
   // Update daily stats
   const today = new Date().toISOString().split('T')[0];
@@ -1587,28 +1722,43 @@ function startFocusSession() {
     focusSession.sessionsToday = 0;
     focusSession.lastSessionDate = today;
   }
-  focusSession.sessionsToday++;
+  
+  // Only increment sessions if starting fresh (not resuming)
+  if (focusSession.pausedTime === 0) {
+    focusSession.sessionsToday++;
+  }
   
   // Start the timer interval
   focusTimerInterval = setInterval(() => {
-    focusSession.currentTime = Math.floor((Date.now() - focusSession.startTime) / 1000);
+    focusSession.currentTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
     updateFocusTimer();
   }, 1000);
   
   saveFocusStats();
+  updateFocusPauseButton();
   console.log('Focus session started');
 }
 
 function stopFocusSession() {
-  if (!focusSession.isActive) return;
+  if (!focusSession.isActive && !focusSession.isPaused) return;
   
-  const sessionDuration = (Date.now() - focusSession.startTime) / (1000 * 60 * 60); // Convert to hours
+  let sessionDuration;
+  if (focusSession.isActive) {
+    // Calculate duration including current active time
+    sessionDuration = (focusSession.pausedTime + (Date.now() - focusSession.startTime) / 1000) / 3600;
+  } else {
+    // Session was paused, use accumulated time
+    sessionDuration = focusSession.pausedTime / 3600;
+  }
+  
   focusSession.totalFocusTime += sessionDuration;
   dailyStats.totalTimeToday += sessionDuration;
   
   focusSession.isActive = false;
+  focusSession.isPaused = false;
   focusSession.startTime = null;
   focusSession.currentTime = 0;
+  focusSession.pausedTime = 0;
   
   if (focusTimerInterval) {
     clearInterval(focusTimerInterval);
@@ -1617,19 +1767,19 @@ function stopFocusSession() {
   
   saveFocusStats();
   saveDailyStats();
+  updateFocusPauseButton();
   console.log(`Focus session ended. Duration: ${sessionDuration.toFixed(2)} hours`);
 }
 
 function pauseFocusSession() {
   if (!focusSession.isActive) return;
   
-  const sessionDuration = (Date.now() - focusSession.startTime) / (1000 * 60 * 60);
-  focusSession.totalFocusTime += sessionDuration;
-  dailyStats.totalTimeToday += sessionDuration;
+  // Store the accumulated time
+  focusSession.pausedTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
   
   focusSession.isActive = false;
+  focusSession.isPaused = true;
   focusSession.startTime = null;
-  focusSession.currentTime = 0;
   
   if (focusTimerInterval) {
     clearInterval(focusTimerInterval);
@@ -1637,14 +1787,63 @@ function pauseFocusSession() {
   }
   
   saveFocusStats();
-  saveDailyStats();
+  updateFocusPauseButton();
+  console.log('Focus session paused');
+}
+
+function resumeFocusSession() {
+  if (focusSession.isActive || !focusSession.isPaused) return;
+  
+  focusSession.isActive = true;
+  focusSession.isPaused = false;
+  focusSession.startTime = Date.now();
+  
+  // Start the timer interval
+  focusTimerInterval = setInterval(() => {
+    focusSession.currentTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
+    updateFocusTimer();
+  }, 1000);
+  
+  saveFocusStats();
+  updateFocusPauseButton();
+  console.log('Focus session resumed');
+}
+
+function toggleFocusPause() {
+  if (focusSession.isActive) {
+    pauseFocusSession();
+  } else if (focusSession.isPaused) {
+    resumeFocusSession();
+  }
+}
+
+function updateFocusPauseButton() {
+  const pauseBtn = document.getElementById('pause-focus');
+  if (!pauseBtn) return;
+  
+  if (focusSession.isActive) {
+    // Session is running - show pause button
+    pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    pauseBtn.title = 'Pause focus session';
+  } else if (focusSession.isPaused) {
+    // Session is paused - show resume button
+    pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    pauseBtn.title = 'Resume focus session';
+  } else {
+    // Session is stopped - show pause button (disabled state)
+    pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    pauseBtn.title = 'Pause focus session';
+  }
 }
 
 function updateFocusTimer() {
-  if (!focusSession.isActive) return;
+  // Show timer if session is active or paused
+  if (!focusSession.isActive && !focusSession.isPaused) return;
   
-  const minutes = Math.floor(focusSession.currentTime / 60);
-  const seconds = focusSession.currentTime % 60;
+  // Use the current accumulated time
+  const timeToDisplay = focusSession.isPaused ? focusSession.pausedTime : focusSession.currentTime;
+  const minutes = Math.floor(timeToDisplay / 60);
+  const seconds = timeToDisplay % 60;
   const timeDisplay = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   
   const timerElement = document.getElementById('focus-timer');
@@ -1652,11 +1851,13 @@ function updateFocusTimer() {
     timerElement.textContent = timeDisplay;
   }
   
-  // Update time logged for today in real-time
-  const sessionHours = focusSession.currentTime / 3600;
-  const totalTimeElement = document.getElementById('time-today');
-  if (totalTimeElement) {
-    totalTimeElement.textContent = `${(dailyStats.totalTimeToday + sessionHours).toFixed(1)}h`;
+  // Update time logged for today in real-time (only when active)
+  if (focusSession.isActive) {
+    const sessionHours = focusSession.currentTime / 3600;
+    const totalTimeElement = document.getElementById('time-today');
+    if (totalTimeElement) {
+      totalTimeElement.textContent = `${(dailyStats.totalTimeToday + sessionHours).toFixed(1)}h`;
+    }
   }
 }
 
@@ -1668,10 +1869,16 @@ function loadFocusStats() {
   const saved = localStorage.getItem('productivity_focus_stats');
   if (saved) {
     focusSession = { ...focusSession, ...JSON.parse(saved) };
-    // Don't restore active session on page load
+    // Don't restore active session on page load, but preserve pause state
     focusSession.isActive = false;
     focusSession.startTime = null;
-    focusSession.currentTime = 0;
+    // If there's paused time, keep the timer display
+    if (focusSession.isPaused && focusSession.pausedTime > 0) {
+      focusSession.currentTime = focusSession.pausedTime;
+      updateFocusTimer();
+    } else {
+      focusSession.currentTime = 0;
+    }
   }
 }
 

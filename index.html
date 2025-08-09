@@ -143,7 +143,7 @@
           <div id="due-today-tasks" class="focus-tasks"></div>
         </div>
         <div class="focus-section">
-          <h3><i class="fas fa-star"></i> High Priority</h3>
+          <h3><i class="fas fa-rocket"></i> Execution Board</h3>
           <div id="high-priority-tasks" class="focus-tasks"></div>
         </div>
       </div>
@@ -417,6 +417,18 @@
           <div class="form-group">
             <label for="project-estimated-time">Estimated Time (hours)</label>
             <input type="number" id="project-estimated-time" step="0.5" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label for="project-theme">Theme</label>
+            <select id="project-theme" required>
+              <option value="General">General</option>
+              <option value="PhD">PhD</option>
+              <option value="Startup">Startup</option>
+              <option value="Personal">Personal</option>
+              <option value="Work">Work</option>
+              <option value="Health">Health</option>
+              <option value="Learning">Learning</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="project-parent">Parent Project (Optional)</label>

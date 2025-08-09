@@ -1,0 +1,228 @@
+# Productivity Dashboard - Claude Context
+
+## Overview
+A comprehensive web-based productivity dashboard with project management, task tracking, focus sessions, Pomodoro timers, and analytics. Built with vanilla HTML, CSS, and JavaScript.
+
+## Architecture
+
+### File Structure
+- `index.html` - Main application interface
+- `script.js` - Core application logic (~3200 lines)
+- `style.css` - Complete styling and responsive design
+- `.github/copilot-instructions.md` - Development patterns and conventions
+
+### Key Data Structures
+```javascript
+// Main project structure
+projects = {
+  [id]: {
+    id, name, description, theme, createdAt, updatedAt,
+    tasks: [], parentId, childProjects: []
+  }
+}
+
+// Theme collapse state tracking
+themeCollapsedState = {
+  [themeName]: boolean // true if theme is collapsed
+}
+
+// Focus session tracking
+focusSession = {
+  isActive: false, isPaused: false,
+  startTime: null, currentTime: 0, pausedTime: 0,
+  totalFocusTime: 0, sessionsToday: 0, lastSessionDate: null
+}
+
+// Pomodoro session tracking  
+pomodoroSession = {
+  isActive: false, taskId: null, projectId: null,
+  currentPhase: 'work', // 'work', 'shortBreak', 'longBreak'
+  currentTime: 0, completedCycles: 0
+}
+```
+
+### Core Views System
+The app has 4 primary views controlled by `currentView` variable:
+- `'project'` - Default hierarchical project view
+- `'board'` - Kanban-style board view  
+- `'focus'` - Focus mode with timer and priority tasks
+- `'archive'` - Archived projects and tasks
+
+**Critical Pattern**: All state changes must call `saveState()` and `updateDisplay()`.
+
+## Key Features & Implementation
+
+### Focus Mode Timer System (Recently Enhanced)
+**Location**: `script.js:1577-1690`
+
+The focus timer supports proper pause/resume functionality:
+- `startFocusSession()` - Starts new session or resumes from pause
+- `pauseFocusSession()` - Pauses and preserves accumulated time  
+- `resumeFocusSession()` - Continues from paused state
+- `toggleFocusPause()` - Single handler for pause/resume button
+- `updateFocusPauseButton()` - Updates button icon (pause ⏸️ / play ▶️)
+
+**Key Properties**:
+- `focusSession.isPaused` - Tracks pause state
+- `focusSession.pausedTime` - Accumulates time when paused
+- Button dynamically changes icon based on session state
+
+### Focus Mode Enhancements (Added 2025-08-09)
+**Location**: `script.js:282-320, 372-385, 566-589`
+
+**New Features**:
+1. **Execution Board Tasks in Focus Mode**: Focus mode now shows all execution board tasks instead of high priority tasks
+2. **Temporary Exit with Auto-Return**: Can exit focus mode to edit tasks/projects and automatically returns
+3. **Computer Sleep Detection**: Focus session pauses when computer is closed/minimized using Page Visibility API
+
+**Implementation Details**:
+- `returnToFocusMode` - Global flag to track when to auto-return to focus mode
+- Modified view switching functions to set auto-return flag when exiting focus mode temporarily
+- Auto-return triggers after task edits, project edits, or modal closures
+- `handleVisibilityChange()` - Pauses focus session when browser tab becomes hidden
+
+### Task Management
+**Hierarchical Structure**: Projects can have parent/child relationships
+**Task Properties**: `id, description, completed, createdAt, dueDate, priority, subtasks[]`
+**Subtasks**: Nested task structure with independent completion tracking
+
+### Timer Systems
+1. **Focus Timer**: Free-running session timer with pause/resume
+2. **Pomodoro Timer**: Structured work/break cycles (25min work, 5min break)
+3. **Task Timers**: Individual task-level time tracking
+
+### Data Persistence
+- `localStorage` for all application state
+- `saveState()` - Persists projects and tasks
+- `saveFocusStats()` - Persists focus session data
+- `saveDailyStats()` - Persists daily progress metrics
+
+### Analytics & Stats
+- Daily completion tracking
+- Focus time logging  
+- Streak counting
+- Monthly/yearly aggregations
+- Visual charts and progress indicators
+
+## Development Patterns
+
+### State Management
+```javascript
+// Always follow this pattern for state changes:
+// 1. Modify data
+// 2. Save state  
+// 3. Update display
+someData.property = newValue;
+saveState();
+updateDisplay();
+```
+
+### View Rendering
+Each view has dedicated render functions:
+- `renderProjects()` - Project hierarchical view
+- `renderBoards()` - Kanban board view
+- `renderFocusView()` - Focus mode with timers
+- `renderArchiveView()` - Archived items
+
+### Event Handling
+- Extensive use of event delegation
+- Modal-based UI for forms and details
+- Real-time updates via `setInterval` for timers
+
+## Common Tasks
+
+### Adding New Features
+1. Define data structure additions
+2. Implement business logic functions
+3. Add UI rendering updates to appropriate render function
+4. Update `saveState()` if new persistent data
+5. Test state persistence across page reloads
+
+### Timer Management
+- All timers use `setInterval` with 1-second updates
+- Always clear intervals with `clearInterval` when stopping
+- Update UI in real-time during timer execution
+- Persist timer state for recovery after page refresh
+
+### UI Updates
+- Use `updateDisplay()` to refresh entire view
+- Individual updates should still call `updateDisplay()` for consistency
+- Modal management via `classList.add/remove('active')`
+
+## Testing Focus Timer
+To test the pause/resume functionality:
+1. Navigate to Focus mode view
+2. Timer should start automatically
+3. Click pause button - timer pauses, button shows play icon
+4. Click play button - timer resumes, button shows pause icon
+5. Verify time accumulates correctly across pause/resume cycles
+
+## Known Issues
+- TypeScript warnings for `webkitAudioContext` and `mozAudioContext` (browser compatibility)
+- `renderBoardView` function name mismatch (should be `renderBoards`)
+
+## Recent Improvements (2025-08-09)
+- **Enhanced Project Editing**: Projects now preserve tasks when edited (explicit task preservation added)
+- **Focus Mode Integration**: Focus mode displays execution board tasks instead of high priority tasks
+- **Seamless Task Management**: Can temporarily exit focus mode for editing and auto-return
+- **Computer Sleep Handling**: Focus session automatically pauses when computer is closed or browser minimized
+- **Theme-Based Project Grouping**: Projects are now organized by themes (PhD, Startup, Personal, etc.) with expand/collapse functionality
+
+### Theme-Based Project Organization (Added 2025-08-09)
+**Location**: `script.js:821-889, style.css:2097-2207`
+
+**Features**:
+- Projects grouped by selectable themes (General, PhD, Startup, Personal, Work, Health, Learning)
+- Each theme group has a colorful header with expand/collapse functionality
+- Collapse states are persisted in localStorage
+- Responsive design with theme-specific gradient colors
+
+**Implementation Details**:
+- `renderProjects()` - Groups projects by theme and renders theme sections
+- `renderThemeGroup()` - Creates expandable theme containers with project counts
+- `toggleTheme()` - Handles expand/collapse with state persistence
+- Theme field added to project form and data structure
+- Migration function adds default 'General' theme to existing projects
+
+## Performance Notes
+- Large task lists may impact rendering performance
+- LocalStorage has ~5MB limit - consider cleanup for very active users
+- Timer intervals continue running even when view is not active (intentional)
+
+## Maintaining This Document
+**IMPORTANT**: This CLAUDE.md file should be updated after every significant modification to the codebase.
+
+### When to Update
+- After adding new features or functionality
+- After fixing bugs (especially architectural changes)
+- After modifying data structures or state management
+- After changing core patterns or conventions
+- After adding new views or major UI changes
+
+### What to Update
+- Add new functions/features to relevant sections
+- Update data structure examples if schemas change
+- Document new development patterns or breaking changes
+- Add new known issues or remove fixed ones
+- Update file structure if new files are added
+- Modify testing instructions for new functionality
+
+### Update Process
+1. **Read current CLAUDE.md** to understand existing documentation
+2. **Identify changes** made during your session
+3. **Update relevant sections** with new information
+4. **Add new sections** if introducing entirely new concepts
+5. **Remove outdated information** that no longer applies
+6. **Test instructions** should reflect current functionality
+
+### Example Updates
+```markdown
+// After adding a new timer feature:
+### New Feature: Custom Timer Intervals (Added YYYY-MM-DD)
+**Location**: `script.js:XXXX-YYYY`
+- Allows users to set custom focus session durations
+- Persisted in `focusSession.customDuration` property
+- UI located in focus mode settings panel
+```
+
+This living document approach ensures future Claude instances have accurate, up-to-date context about the codebase and can work more effectively without having to rediscover patterns and structures.
