@@ -1,0 +1,60 @@
+{
+  "name": "productivity-dashboard",
+  "version": "1.0.0",
+  "description": "A sophisticated, project-based productivity management system designed for researchers and professionals who need to balance execution-focused work with incubation of future ideas.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "electron-builder",
+    "build-mac": "electron-builder --mac",
+    "dist": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/camwolford/Productivity_Dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/camwolford/Productivity_Dashboard/issues"
+  },
+  "homepage": "https://github.com/camwolford/Productivity_Dashboard#readme",
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.campbellwolford.productivity-dashboard",
+    "productName": "Productivity Dashboard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "script.js",
+      "style.css",
+      "app_icon.png",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": {
+        "target": "dmg",
+        "arch": [
+          "x64",
+          "arm64"
+        ]
+      },
+      "icon": "app_icon.png"
+    },
+    "dmg": {
+      "title": "Productivity Dashboard"
+    }
+  }
+}

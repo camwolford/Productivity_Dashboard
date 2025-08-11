@@ -1,11 +1,87 @@
+// Electron detection and IPC setup
+let isElectron = false;
+let ipcRenderer = null;
+
+try {
+  if (window.require) {
+    const electron = window.require('electron');
+    ipcRenderer = electron.ipcRenderer;
+    isElectron = true;
+    console.log('Running in Electron environment');
+  }
+} catch (error) {
+  console.log('Running in browser environment');
+  isElectron = false;
+}
+
+// Set up Electron IPC listeners if in Electron environment
+if (isElectron && ipcRenderer) {
+  // Listen for focus timer updates from main process
+  ipcRenderer.on('focus-timer-update', (event, currentTime) => {
+    focusSession.currentTime = currentTime;
+    updateFocusTimer();
+  });
+  
+  // Listen for menu shortcuts
+  ipcRenderer.on('menu-new-project', () => {
+    openProjectModal();
+  });
+  
+  ipcRenderer.on('menu-focus-mode', () => {
+    toggleFocusView();
+  });
+  
+  ipcRenderer.on('menu-project-view', () => {
+    currentView = 'project';
+    updateDisplay();
+    updateViewButtons();
+  });
+  
+  ipcRenderer.on('menu-board-view', () => {
+    currentView = 'board';
+    updateDisplay();
+    updateViewButtons();
+  });
+}
+
+// Native notification function
+async function showNativeNotification(title, body, options = {}) {
+  if (isElectron && ipcRenderer) {
+    // Use Electron's native notifications
+    return await ipcRenderer.invoke('show-notification', title, body, options);
+  } else if ('Notification' in window && Notification.permission === 'granted') {
+    // Use browser notifications as fallback
+    const notification = new Notification(title, { body, ...options });
+    if (options.onClick) {
+      notification.onclick = options.onClick;
+    }
+    return true;
+  } else if ('Notification' in window && Notification.permission !== 'denied') {
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const notification = new Notification(title, { body, ...options });
+      if (options.onClick) {
+        notification.onclick = options.onClick;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 // Global State Management
 let projects = {};
 let archivedTasks = {};
 let archivedProjects = {};
 let currentView = 'project'; // 'project', 'board', 'focus', or 'archive'
 let returnToFocusMode = false; // Track if we should auto-return to focus mode
-let themeCollapsedState = {}; // Track which themes are collapsed: { themeName: boolean }
+let aspectCollapsedState = {}; // Track which aspects are collapsed: { aspectName: boolean }
 let nextId = 1;
+
+// Aspect and Dashboard Management
+let availableAspects = ['General'];
+let dashboardTitle = "Productivity Dashboard";
 let dailyStats = {
   completedToday: 0,
   totalTimeToday: 0,
@@ -100,6 +176,13 @@ const closeStats = document.getElementById('close-stats');
 const cancelBtn = document.getElementById('cancel-btn');
 
 // Initialize the application
+function updateDashboardTitleDisplay() {
+  const titleElement = document.getElementById('dashboard-title');
+  if (titleElement) {
+    titleElement.textContent = dashboardTitle;
+  }
+}
+
 function init() {
   loadState();
   loadDailyStats();
@@ -111,8 +194,12 @@ function init() {
   loadGoals();
   loadDayChangeDetector();
   setupEventListeners();
+  updateDashboardTitleDisplay();
+  updateProjectThemeOptions();
   updateDisplay();
   updateDailyStats();
+  updateFloatingTimerVisibility();
+  updateFloatingTimerControls();
   
   // Initialize undo/redo system
   initializeUndoRedo();
@@ -165,6 +252,29 @@ function setupEventListeners() {
   // Focus mode controls
   document.getElementById('pause-focus')?.addEventListener('click', toggleFocusPause);
   
+  // Floating timer controls
+  document.getElementById('floating-pause-btn')?.addEventListener('click', toggleFocusPause);
+  document.getElementById('floating-stop-btn')?.addEventListener('click', stopFocusSession);
+  
+  // Aspect management event listeners
+  const manageAspectsBtn = document.getElementById('manage-aspects-btn');
+  const aspectModal = document.getElementById('aspect-modal');
+  const closeAspectModalBtn = document.getElementById('close-aspect-modal');
+  const aspectForm = document.getElementById('aspect-form');
+  const cancelAspectBtn = document.getElementById('cancel-aspect-btn');
+  
+  if (manageAspectsBtn) manageAspectsBtn.addEventListener('click', openAspectModal);
+  if (closeAspectModalBtn) closeAspectModalBtn.addEventListener('click', closeAspectModal);
+  if (aspectForm) aspectForm.addEventListener('submit', handleAspectSubmit);
+  if (cancelAspectBtn) cancelAspectBtn.addEventListener('click', clearAspectForm);
+  
+  // Close aspect modal when clicking outside
+  if (aspectModal) {
+    aspectModal.addEventListener('click', (e) => {
+      if (e.target === aspectModal) closeAspectModal();
+    });
+  }
+  
   // Pomodoro controls
   document.getElementById('pause-pomodoro')?.addEventListener('click', pausePomodoroSession);
   document.getElementById('resume-pomodoro')?.addEventListener('click', resumePomodoroSession);
@@ -212,10 +322,15 @@ function setupEventListeners() {
 }
 
 function handleVisibilityChange() {
-  if (document.hidden && currentView === 'focus' && focusSession.isActive && !focusSession.isPaused) {
+  if (document.hidden && focusSession.isActive && !focusSession.isPaused) {
     // Pause focus session when window is hidden (computer closed/minimized)
+    // Works regardless of current view - timer runs in background
     pauseFocusSession();
     console.log('Focus session paused due to window being hidden');
+  } else if (!document.hidden && focusSession.isPaused && (currentView === 'focus' || returnToFocusMode)) {
+    // Resume focus session when window becomes visible if we're in focus mode or should return to it
+    resumeFocusSession();
+    console.log('Focus session resumed due to window becoming visible');
   }
 }
 
@@ -224,29 +339,35 @@ function toggleView() {
   if (currentView === 'focus') {
     // Set flag to return to focus mode after task edits
     returnToFocusMode = true;
-    stopFocusSession();
+    // Don't stop focus session - let it continue in background
     currentView = 'project';
   } else {
     currentView = currentView === 'project' ? 'board' : 'project';
   }
   updateDisplay();
   updateViewButtons();
+  updateFloatingTimerVisibility();
 }
 
 function toggleFocusView() {
   if (currentView === 'focus') {
-    // Exiting focus mode - stop the timer and don't auto-return
+    // Exiting focus mode - let timer continue in background
     returnToFocusMode = false;
-    stopFocusSession();
+    // Only stop session if user clicks focus button twice (explicit stop)
+    // Otherwise, let it continue running in background
     currentView = 'project';
   } else {
-    // Entering focus mode - start the timer and clear auto-return flag
+    // Entering focus mode - clear auto-return flag but don't auto-start timer
     returnToFocusMode = false;
     currentView = 'focus';
-    startFocusSession();
+    // Only start a new session if no session is currently active or paused
+    if (!focusSession.isActive && !focusSession.isPaused) {
+      startFocusSession();
+    }
   }
   updateDisplay();
   updateViewButtons();
+  updateFloatingTimerVisibility();
 }
 
 function toggleArchiveView() {
@@ -258,6 +379,7 @@ function toggleArchiveView() {
   currentView = currentView === 'archive' ? 'project' : 'archive';
   updateDisplay();
   updateViewButtons();
+  updateFloatingTimerVisibility();
 }
 
 function updateViewButtons() {
@@ -277,6 +399,9 @@ function updateViewButtons() {
     archiveToggle.classList.add('active');
     viewToggle.innerHTML = '<i class="fas fa-th-large"></i> Board View';
   }
+  
+  // Update focus button indicator
+  updateFocusButtonIndicator();
 }
 
 function showStats() {
@@ -329,8 +454,9 @@ function openProjectModal(project = null) {
   const projectStatus = document.getElementById('project-status');
   const projectTheme = document.getElementById('project-theme');
   
-  // Populate parent project dropdown
+  // Populate dropdowns
   populateParentProjectDropdown(project ? project.id : null);
+  updateProjectThemeOptions();
   
   if (project) {
     modalTitle.textContent = 'Edit Project';
@@ -403,7 +529,12 @@ function closeProjectModal() {
   if (returnToFocusMode && currentView !== 'focus') {
     returnToFocusMode = false;
     currentView = 'focus';
-    startFocusSession();
+    // Resume focus session instead of starting new one
+    if (focusSession.isPaused) {
+      resumeFocusSession();
+    } else {
+      startFocusSession();
+    }
     updateDisplay();
     updateViewButtons();
   }
@@ -425,7 +556,8 @@ function handleProjectSubmit(e) {
     childProjects: [],
     tasks: [],
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    order: Date.now() // Use timestamp for default order
   };
   
   if (!projectData.name) return;
@@ -605,7 +737,12 @@ function editTask(projectId, taskId) {
         if (returnToFocusMode && currentView !== 'focus') {
           returnToFocusMode = false;
           currentView = 'focus';
-          startFocusSession();
+          // Resume focus session instead of starting new one
+          if (focusSession.isPaused) {
+            resumeFocusSession();
+          } else {
+            startFocusSession();
+          }
           updateDisplay();
           updateViewButtons();
         }
@@ -671,7 +808,12 @@ function editSubtask(projectId, taskId, subtaskId) {
           if (returnToFocusMode && currentView !== 'focus') {
             returnToFocusMode = false;
             currentView = 'focus';
-            startFocusSession();
+            // Resume focus session instead of starting new one
+            if (focusSession.isPaused) {
+              resumeFocusSession();
+            } else {
+              startFocusSession();
+            }
             updateDisplay();
             updateViewButtons();
           }
@@ -845,49 +987,75 @@ function renderProjects() {
   
   // Render each theme group
   Object.keys(projectsByTheme).sort().forEach(theme => {
-    renderThemeGroup(theme, projectsByTheme[theme]);
+    // Sort projects within each theme by order
+    const sortedProjects = projectsByTheme[theme].sort((a, b) => (a.order || 0) - (b.order || 0));
+    renderAspectGroup(theme, sortedProjects);
   });
 }
 
-function renderThemeGroup(theme, projects) {
-  const isCollapsed = themeCollapsedState[theme] || false;
+function renderAspectGroup(aspect, projects) {
+  const isCollapsed = aspectCollapsedState[aspect] || false;
   
-  const themeContainer = document.createElement('div');
-  themeContainer.className = 'theme-group';
+  const aspectContainer = document.createElement('div');
+  aspectContainer.className = 'aspect-group';
   
-  const themeHeader = document.createElement('div');
-  themeHeader.className = 'theme-header';
-  themeHeader.innerHTML = `
-    <div class="theme-title" onclick="toggleTheme('${theme}')">
-      <i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}" id="theme-${theme}-icon"></i>
-      <h3>${theme}</h3>
-      <span class="theme-count">${projects.length} project${projects.length !== 1 ? 's' : ''}</span>
+  const aspectHeader = document.createElement('div');
+  aspectHeader.className = 'aspect-header';
+  aspectHeader.innerHTML = `
+    <div class="aspect-title" onclick="toggleAspect('${aspect}')">
+      <i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}" id="aspect-${aspect}-icon"></i>
+      <h3>${aspect}</h3>
+      <span class="aspect-count">${projects.length} project${projects.length !== 1 ? 's' : ''}</span>
     </div>
   `;
   
-  const themeContent = document.createElement('div');
-  themeContent.className = 'theme-content';
-  themeContent.id = `theme-${theme}-content`;
-  themeContent.style.display = isCollapsed ? 'none' : 'block';
+  const aspectContent = document.createElement('div');
+  aspectContent.className = 'aspect-content';
+  aspectContent.id = `aspect-${aspect}-content`;
+  aspectContent.style.display = isCollapsed ? 'none' : 'block';
   
-  // Render projects in this theme
-  projects.forEach(project => {
-    renderProjectHierarchy(project, 0, themeContent);
+  // Render projects in this aspect with drop zones for positioning
+  projects.forEach((project, index) => {
+    // Add drop zone before each project
+    const dropZone = document.createElement('div');
+    dropZone.className = 'project-drop-zone';
+    dropZone.innerHTML = '<div class="drop-indicator"></div>';
+    makeDropZone(dropZone, 'project-position', { 
+      aspect: aspect, 
+      insertBeforeProjectId: project.id,
+      insertIndex: index 
+    });
+    aspectContent.appendChild(dropZone);
+    
+    renderProjectHierarchy(project, 0, aspectContent);
   });
   
-  themeContainer.appendChild(themeHeader);
-  themeContainer.appendChild(themeContent);
-  projectsContainer.appendChild(themeContainer);
+  // Add drop zone at the end for appending
+  const endDropZone = document.createElement('div');
+  endDropZone.className = 'project-drop-zone project-drop-zone-end';
+  endDropZone.innerHTML = '<div class="drop-indicator"></div>';
+  makeDropZone(endDropZone, 'project-position', { 
+    aspect: aspect, 
+    insertIndex: projects.length 
+  });
+  aspectContent.appendChild(endDropZone);
+  
+  aspectContainer.appendChild(aspectHeader);
+  aspectContainer.appendChild(aspectContent);
+  projectsContainer.appendChild(aspectContainer);
+  
+  // Make aspect header a drop zone for projects (for moving between aspects)
+  makeDropZone(aspectHeader, 'aspect', { aspect: aspect });
 }
 
-function toggleTheme(theme) {
-  const isCurrentlyCollapsed = themeCollapsedState[theme] || false;
-  themeCollapsedState[theme] = !isCurrentlyCollapsed;
+function toggleAspect(aspect) {
+  const isCurrentlyCollapsed = aspectCollapsedState[aspect] || false;
+  aspectCollapsedState[aspect] = !isCurrentlyCollapsed;
   
-  const content = document.getElementById(`theme-${theme}-content`);
-  const icon = document.getElementById(`theme-${theme}-icon`);
+  const content = document.getElementById(`aspect-${aspect}-content`);
+  const icon = document.getElementById(`aspect-${aspect}-icon`);
   
-  if (themeCollapsedState[theme]) {
+  if (aspectCollapsedState[aspect]) {
     content.style.display = 'none';
     icon.className = 'fas fa-chevron-right';
   } else {
@@ -917,6 +1085,7 @@ function createProjectCard(project, depth = 0) {
   const card = document.createElement('div');
   card.className = `project-card drop-zone ${depth > 0 ? 'nested-project' : ''}`;
   card.style.marginLeft = `${depth * 20}px`;
+  card.setAttribute('data-project-id', project.id);
   
   const completedTasks = project.tasks.filter(task => task.completed).length;
   const totalTasks = project.tasks.length;
@@ -926,6 +1095,9 @@ function createProjectCard(project, depth = 0) {
   
   card.innerHTML = `
     <div class="project-header">
+      <div class="drag-handle" title="Drag to move project">
+        <i class="fas fa-grip-vertical"></i>
+      </div>
       <div>
         <div class="project-title">
           ${depth > 0 ? '<i class="fas fa-level-up-alt nested-indicator"></i>' : ''}
@@ -982,6 +1154,7 @@ function createProjectCard(project, depth = 0) {
   
   // Set up drag and drop for the project card
   makeDropZone(card, 'project', { projectId: project.id });
+  makeDraggable(card, 'project', { projectId: project.id, aspect: project.theme || 'General' });
   
   // Set up drag and drop for all task and subtask elements after DOM is created
   setTimeout(() => setupTaskDragDrop(card, project), 0);
@@ -1155,7 +1328,9 @@ function saveState() {
   localStorage.setItem('productivity_projects', JSON.stringify(projects));
   localStorage.setItem('productivity_archived_tasks', JSON.stringify(archivedTasks));
   localStorage.setItem('productivity_archived_projects', JSON.stringify(archivedProjects));
-  localStorage.setItem('productivity_theme_states', JSON.stringify(themeCollapsedState));
+  localStorage.setItem('productivity_aspect_states', JSON.stringify(aspectCollapsedState));
+  localStorage.setItem('productivity_available_aspects', JSON.stringify(availableAspects));
+  localStorage.setItem('productivity_dashboard_title', dashboardTitle);
   localStorage.setItem('productivity_nextId', nextId.toString());
 }
 
@@ -1165,13 +1340,17 @@ function loadState() {
   const savedArchivedTasks = localStorage.getItem('productivity_archived_tasks');
   const savedArchivedProjects = localStorage.getItem('productivity_archived_projects');
   const savedNextId = localStorage.getItem('productivity_nextId');
-  const savedThemeStates = localStorage.getItem('productivity_theme_states');
+  const savedAspectStates = localStorage.getItem('productivity_aspect_states');
+  const savedAvailableAspects = localStorage.getItem('productivity_available_aspects');
+  const savedDashboardTitle = localStorage.getItem('productivity_dashboard_title');
   
   if (savedProjects) {
     projects = JSON.parse(savedProjects);
     archivedTasks = savedArchivedTasks ? JSON.parse(savedArchivedTasks) : {};
     archivedProjects = savedArchivedProjects ? JSON.parse(savedArchivedProjects) : {};
-    themeCollapsedState = savedThemeStates ? JSON.parse(savedThemeStates) : {};
+    aspectCollapsedState = savedAspectStates ? JSON.parse(savedAspectStates) : {};
+    availableAspects = savedAvailableAspects ? JSON.parse(savedAvailableAspects) : ['General'];
+    dashboardTitle = savedDashboardTitle || "Productivity Dashboard";
     nextId = parseInt(savedNextId) || 1;
     migrateProjectsForNesting();
   } else {
@@ -1194,6 +1373,10 @@ function migrateProjectsForNesting() {
     }
     if (!project.hasOwnProperty('theme')) {
       project.theme = 'General'; // Default theme for existing projects
+      needsSave = true;
+    }
+    if (!project.hasOwnProperty('order')) {
+      project.order = Date.parse(project.createdAt) || Date.now(); // Default order by creation time
       needsSave = true;
     }
   });
@@ -1794,6 +1977,25 @@ function stopTimer() {
   timerStartTime = null;
 }
 
+// Focus Timer Interval Management
+function startFocusTimerInterval() {
+  if (focusTimerInterval) {
+    clearInterval(focusTimerInterval);
+  }
+  
+  if (isElectron && ipcRenderer) {
+    // Use Electron's main process timer
+    ipcRenderer.invoke('start-focus-timer', focusSession.startTime, focusSession.pausedTime);
+  } else {
+    // Browser timer
+    focusTimerInterval = setInterval(() => {
+      focusSession.currentTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
+      updateFocusTimer();
+      saveFocusStats(); // Save state periodically
+    }, 1000);
+  }
+}
+
 // Focus Session Management
 function startFocusSession() {
   if (focusSession.isActive) return;
@@ -1823,27 +2025,40 @@ function startFocusSession() {
   }
   
   // Start the timer interval
-  focusTimerInterval = setInterval(() => {
-    focusSession.currentTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
-    updateFocusTimer();
-  }, 1000);
+  startFocusTimerInterval();
   
   saveFocusStats();
   updateFocusPauseButton();
+  updateFloatingTimerControls();
+  updateFloatingTimerVisibility();
   console.log('Focus session started');
 }
 
-function stopFocusSession() {
+async function stopFocusSession() {
   if (!focusSession.isActive && !focusSession.isPaused) return;
   
-  let sessionDuration;
-  if (focusSession.isActive) {
-    // Calculate duration including current active time
-    sessionDuration = (focusSession.pausedTime + (Date.now() - focusSession.startTime) / 1000) / 3600;
+  let finalTime;
+  
+  if (isElectron && ipcRenderer) {
+    // Use Electron's main process stop
+    finalTime = await ipcRenderer.invoke('stop-focus-timer');
+    console.log('Focus session stopped in Electron main process');
   } else {
-    // Session was paused, use accumulated time
-    sessionDuration = focusSession.pausedTime / 3600;
+    // Browser fallback
+    if (focusSession.isActive) {
+      finalTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
+    } else {
+      finalTime = focusSession.pausedTime;
+    }
+    
+    if (focusTimerInterval) {
+      clearInterval(focusTimerInterval);
+      focusTimerInterval = null;
+    }
+    console.log('Focus session stopped in browser');
   }
+  
+  const sessionDuration = finalTime / 3600; // Convert to hours
   
   focusSession.totalFocusTime += sessionDuration;
   dailyStats.totalTimeToday += sessionDuration;
@@ -1854,38 +2069,58 @@ function stopFocusSession() {
   focusSession.currentTime = 0;
   focusSession.pausedTime = 0;
   
-  if (focusTimerInterval) {
-    clearInterval(focusTimerInterval);
-    focusTimerInterval = null;
-  }
-  
   saveFocusStats();
   saveDailyStats();
   updateFocusPauseButton();
+  updateFloatingTimerControls();
+  updateFloatingTimerVisibility();
   console.log(`Focus session ended. Duration: ${sessionDuration.toFixed(2)} hours`);
+  
+  // Show notification for focus session completion
+  if (sessionDuration > 0.1) { // Only notify for sessions longer than 6 minutes
+    showNativeNotification(
+      'Focus Session Complete!',
+      `Great work! You focused for ${Math.round(sessionDuration * 60)} minutes.`,
+      { 
+        silent: false,
+        onClick: 'focus-completed'
+      }
+    );
+  }
 }
 
-function pauseFocusSession() {
+async function pauseFocusSession() {
   if (!focusSession.isActive) return;
   
-  // Store the accumulated time
-  focusSession.pausedTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
-  
-  focusSession.isActive = false;
-  focusSession.isPaused = true;
-  focusSession.startTime = null;
-  
-  if (focusTimerInterval) {
-    clearInterval(focusTimerInterval);
-    focusTimerInterval = null;
+  if (isElectron && ipcRenderer) {
+    // Use Electron's main process pause
+    const pausedTime = await ipcRenderer.invoke('pause-focus-timer');
+    focusSession.pausedTime = pausedTime;
+    focusSession.isActive = false;
+    focusSession.isPaused = true;
+    focusSession.startTime = null;
+    console.log('Focus session paused in Electron main process');
+  } else {
+    // Browser fallback
+    focusSession.pausedTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
+    focusSession.isActive = false;
+    focusSession.isPaused = true;
+    focusSession.startTime = null;
+    
+    if (focusTimerInterval) {
+      clearInterval(focusTimerInterval);
+      focusTimerInterval = null;
+    }
+    console.log('Focus session paused in browser');
   }
   
   saveFocusStats();
   updateFocusPauseButton();
-  console.log('Focus session paused');
+  updateFloatingTimerControls();
+  updateFloatingTimerVisibility();
 }
 
-function resumeFocusSession() {
+async function resumeFocusSession() {
   if (focusSession.isActive || !focusSession.isPaused) return;
   
   // Check for day change before resuming session
@@ -1896,14 +2131,12 @@ function resumeFocusSession() {
   focusSession.startTime = Date.now();
   
   // Start the timer interval
-  focusTimerInterval = setInterval(() => {
-    focusSession.currentTime = focusSession.pausedTime + Math.floor((Date.now() - focusSession.startTime) / 1000);
-    updateFocusTimer();
-  }, 1000);
+  startFocusTimerInterval();
   
   saveFocusStats();
   updateFocusPauseButton();
-  console.log('Focus session resumed');
+  updateFloatingTimerControls();
+  updateFloatingTimerVisibility();
 }
 
 function toggleFocusPause() {
@@ -1933,6 +2166,17 @@ function updateFocusPauseButton() {
   }
 }
 
+function updateFocusButtonIndicator() {
+  // Add visual indicator to focus button when session is running in background
+  if ((focusSession.isActive || focusSession.isPaused) && currentView !== 'focus') {
+    focusToggle.innerHTML = '<i class="fas fa-brain"></i> Focus <span class="focus-indicator">●</span>';
+    focusToggle.style.color = focusSession.isActive ? '#4CAF50' : '#FF9800';
+  } else {
+    focusToggle.innerHTML = '<i class="fas fa-brain"></i> Focus';
+    focusToggle.style.color = '';
+  }
+}
+
 function updateFocusTimer() {
   // Show timer if session is active or paused
   if (!focusSession.isActive && !focusSession.isPaused) return;
@@ -1943,9 +2187,16 @@ function updateFocusTimer() {
   const seconds = timeToDisplay % 60;
   const timeDisplay = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   
+  // Update focus mode timer
   const timerElement = document.getElementById('focus-timer');
   if (timerElement) {
     timerElement.textContent = timeDisplay;
+  }
+  
+  // Update floating timer
+  const floatingTimerText = document.getElementById('floating-timer-text');
+  if (floatingTimerText) {
+    floatingTimerText.textContent = timeDisplay;
   }
   
   // Update time logged for today in real-time (only when active)
@@ -1958,6 +2209,42 @@ function updateFocusTimer() {
   }
 }
 
+// Floating Timer Management
+function showFloatingTimer() {
+  const floatingTimer = document.getElementById('floating-timer');
+  if (floatingTimer && currentView !== 'focus') {
+    floatingTimer.classList.remove('hidden');
+  }
+}
+
+function hideFloatingTimer() {
+  const floatingTimer = document.getElementById('floating-timer');
+  if (floatingTimer) {
+    floatingTimer.classList.add('hidden');
+  }
+}
+
+function updateFloatingTimerVisibility() {
+  if ((focusSession.isActive || focusSession.isPaused) && currentView !== 'focus') {
+    showFloatingTimer();
+  } else {
+    hideFloatingTimer();
+  }
+}
+
+function updateFloatingTimerControls() {
+  const floatingPauseBtn = document.getElementById('floating-pause-btn');
+  if (floatingPauseBtn) {
+    if (focusSession.isActive) {
+      floatingPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+      floatingPauseBtn.title = 'Pause';
+    } else if (focusSession.isPaused) {
+      floatingPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+      floatingPauseBtn.title = 'Resume';
+    }
+  }
+}
+
 function saveFocusStats() {
   localStorage.setItem('productivity_focus_stats', JSON.stringify(focusSession));
 }
@@ -1965,16 +2252,38 @@ function saveFocusStats() {
 function loadFocusStats() {
   const saved = localStorage.getItem('productivity_focus_stats');
   if (saved) {
-    focusSession = { ...focusSession, ...JSON.parse(saved) };
-    // Don't restore active session on page load, but preserve pause state
-    focusSession.isActive = false;
-    focusSession.startTime = null;
-    // If there's paused time, keep the timer display
-    if (focusSession.isPaused && focusSession.pausedTime > 0) {
-      focusSession.currentTime = focusSession.pausedTime;
+    const savedSession = JSON.parse(saved);
+    focusSession = { ...focusSession, ...savedSession };
+    
+    // If session was active when saved, restore it properly
+    if (savedSession.isActive && savedSession.startTime) {
+      // Calculate elapsed time since last save
+      const now = Date.now();
+      const elapsed = Math.floor((now - savedSession.startTime) / 1000);
+      focusSession.currentTime = savedSession.pausedTime + elapsed;
+      focusSession.startTime = now; // Reset start time to now for continued timing
+      focusSession.isActive = true; // Ensure active state is restored
+      
+      // Restart the timer interval
+      startFocusTimerInterval();
+      // Update display immediately
       updateFocusTimer();
-    } else {
-      focusSession.currentTime = 0;
+      // Update floating timer controls and visibility
+      updateFloatingTimerControls();
+      updateFloatingTimerVisibility();
+    } else if (savedSession.isPaused) {
+      // If paused, keep the paused state but don't start timer
+      focusSession.isActive = false;
+      // If there's paused time, keep the timer display
+      if (focusSession.isPaused && focusSession.pausedTime > 0) {
+        focusSession.currentTime = focusSession.pausedTime;
+        updateFocusTimer();
+      } else {
+        focusSession.currentTime = 0;
+      }
+      // Update floating timer for paused sessions too
+      updateFloatingTimerControls();
+      updateFloatingTimerVisibility();
     }
   }
 }
@@ -2536,13 +2845,9 @@ function renderIncubationHeatmap() {
   if (!heatmapContainer) return;
 
   const today = new Date();
-  const startDate = new Date(today);
-  startDate.setDate(today.getDate() - 364); // Show last 365 days
+  const monthlyHeatmapHTML = generateMonthlyHeatmapHTML(today);
   
-  const heatmapData = generateHeatmapData(startDate, today);
-  const heatmapHTML = generateHeatmapHTML(heatmapData);
-  
-  heatmapContainer.innerHTML = heatmapHTML;
+  heatmapContainer.innerHTML = monthlyHeatmapHTML;
 }
 
 function generateHeatmapData(startDate, endDate) {
@@ -2573,83 +2878,88 @@ function getActivityLevel(count) {
   return 4;
 }
 
-function generateHeatmapHTML(data) {
-  const weeks = [];
-  let currentWeek = [];
+function generateMonthlyHeatmapHTML(referenceDate) {
+  let html = '<div class="monthly-heatmap-container">';
   
-  // Group data into weeks (Sunday to Saturday)
-  data.forEach((day, index) => {
-    const date = new Date(day.date);
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+  // Show last 6 months
+  for (let monthOffset = 5; monthOffset >= 0; monthOffset--) {
+    const monthDate = new Date(referenceDate);
+    monthDate.setMonth(monthDate.getMonth() - monthOffset);
     
-    // If it's the first day and not Sunday, add empty cells
-    if (index === 0 && dayOfWeek > 0) {
-      for (let i = 0; i < dayOfWeek; i++) {
-        currentWeek.push(null);
-      }
-    }
-    
-    currentWeek.push(day);
-    
-    // If it's Saturday or the last day, complete the week
-    if (dayOfWeek === 6 || index === data.length - 1) {
-      // Fill remaining days of the week if necessary
-      while (currentWeek.length < 7) {
-        currentWeek.push(null);
-      }
-      weeks.push([...currentWeek]);
-      currentWeek = [];
-    }
-  });
-  
-  // Generate month labels
-  const months = [];
-  for (let i = 0; i < 12; i++) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - (11 - i));
-    months.push({
-      name: date.toLocaleDateString('en-US', { month: 'short' }),
-      index: i
-    });
+    const monthData = generateMonthData(monthDate);
+    html += generateMonthHTML(monthData, monthDate);
   }
   
-  let html = '<div class="heatmap-months">';
-  months.forEach(month => {
-    html += `<span class="month-label">${month.name}</span>`;
-  });
   html += '</div>';
+  return html;
+}
+
+function generateMonthData(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
   
-  html += '<div class="heatmap-grid">';
+  const data = [];
+  const currentDate = new Date(firstDay);
   
-  // Add day labels
-  html += '<div class="heatmap-days">';
-  ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach((day, index) => {
-    html += `<span class="day-label" style="visibility: ${index % 2 === 1 ? 'visible' : 'hidden'}">${day}</span>`;
-  });
-  html += '</div>';
+  // Add empty cells for days before the first of the month
+  const startDayOfWeek = firstDay.getDay();
+  for (let i = 0; i < startDayOfWeek; i++) {
+    data.push(null);
+  }
   
-  // Add heatmap cells
-  html += '<div class="heatmap-cells">';
-  weeks.forEach(week => {
-    html += '<div class="heatmap-week">';
-    week.forEach(day => {
-      if (day) {
-        const date = new Date(day.date);
-        const title = `${date.toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        })}: ${day.count} ideas added`;
-        html += `<div class="heatmap-cell" data-level="${day.level}" title="${title}"></div>`;
-      } else {
-        html += '<div class="heatmap-cell empty"></div>';
-      }
+  // Add all days of the month
+  while (currentDate <= lastDay) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const activity = analyticsData.incubationActivity[dateStr] || 0;
+    
+    data.push({
+      date: dateStr,
+      day: currentDate.getDate(),
+      count: activity,
+      level: getActivityLevel(activity)
     });
-    html += '</div>';
+    
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return data;
+}
+
+function generateMonthHTML(data, monthDate) {
+  const monthName = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  
+  let html = `<div class="monthly-heatmap-month">`;
+  html += `<div class="month-title">${monthName}</div>`;
+  html += `<div class="month-grid">`;
+  
+  // Add day headers
+  html += `<div class="month-day-headers">`;
+  ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(day => {
+    html += `<div class="day-header">${day}</div>`;
   });
-  html += '</div>';
-  html += '</div>';
+  html += `</div>`;
+  
+  // Add calendar grid
+  html += `<div class="month-calendar">`;
+  data.forEach((day, index) => {
+    if (day) {
+      const date = new Date(day.date);
+      const title = `${date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric',
+        year: 'numeric'
+      })}: ${day.count} ideas added`;
+      html += `<div class="month-day" data-level="${day.level}" title="${title}">${day.day}</div>`;
+    } else {
+      html += `<div class="month-day empty"></div>`;
+    }
+  });
+  html += `</div>`;
+  html += `</div>`;
+  html += `</div>`;
   
   return html;
 }
@@ -3133,9 +3443,10 @@ function getDueDateStatus(dueDate) {
 let dragState = {
   draggedElement: null,
   draggedData: null,
-  dragType: null, // 'task' or 'subtask'
+  dragType: null, // 'task', 'subtask', or 'project'
   sourceProject: null,
-  sourceTask: null
+  sourceTask: null,
+  sourceAspect: null
 };
 
 // Drag and Drop Functions
@@ -3162,6 +3473,8 @@ function handleDragStart(e, type, data) {
   } else if (type === 'subtask') {
     dragState.sourceProject = data.projectId;
     dragState.sourceTask = data.taskId;
+  } else if (type === 'project') {
+    dragState.sourceAspect = data.aspect;
   }
   
   e.target.classList.add('dragging');
@@ -3196,6 +3509,7 @@ function handleDragLeave(e) {
 
 function handleDrop(e, type, targetData) {
   e.preventDefault();
+  e.stopPropagation(); // Prevent event bubbling
   e.currentTarget.classList.remove('drag-over');
   
   if (!canDrop(e.currentTarget) || !dragState.draggedData) return;
@@ -3218,6 +3532,7 @@ function canDrop(dropTarget) {
 
 function performDrop(targetType, targetData) {
   const { dragType, draggedData } = dragState;
+  console.log(`performDrop: dragType=${dragType}, targetType=${targetType}`, targetData);
   
   if (dragType === 'task' && targetType === 'project') {
     return moveTaskToProject(draggedData, targetData.projectId);
@@ -3229,6 +3544,13 @@ function performDrop(targetType, targetData) {
     return moveSubtaskToTask(draggedData, targetData);
   } else if (dragType === 'subtask' && targetType === 'subtask-position') {
     return moveSubtaskToPosition(draggedData, targetData);
+  } else if (dragType === 'project' && targetType === 'aspect') {
+    return moveProjectToAspect(draggedData, targetData.aspect);
+  } else if (dragType === 'project' && targetType === 'project') {
+    return moveProjectToPosition(draggedData, targetData);
+  } else if (dragType === 'project' && targetType === 'project-position') {
+    console.log('Calling moveProjectToSpecificPosition');
+    return moveProjectToSpecificPosition(draggedData, targetData);
   }
   
   return false;
@@ -3502,6 +3824,327 @@ function initializeUndoRedo() {
   });
   
   updateUndoRedoButtons();
+}
+
+// Project Drag and Drop Functions
+function moveProjectToAspect(projectData, targetAspect) {
+  const project = projects[projectData.projectId];
+  if (!project) return false;
+  
+  // Change project's theme/aspect and set order to end
+  project.theme = targetAspect;
+  project.order = Date.now(); // Move to end of the aspect
+  project.updatedAt = new Date().toISOString();
+  
+  console.log(`Moved project "${project.name}" to aspect "${targetAspect}"`);
+  return true;
+}
+
+function moveProjectToPosition(draggedData, targetData) {
+  const draggedProject = projects[draggedData.projectId];
+  const targetProject = projects[targetData.projectId];
+  
+  if (!draggedProject || !targetProject) return false;
+  if (draggedProject.id === targetProject.id) return false;
+  
+  // Move dragged project to same aspect as target project and position it after target
+  draggedProject.theme = targetProject.theme || 'General';
+  draggedProject.order = targetProject.order + 1;
+  draggedProject.updatedAt = new Date().toISOString();
+  
+  // Reorder other projects to make space
+  reorderProjectsInAspect(draggedProject.theme, draggedProject.id);
+  
+  console.log(`Moved project "${draggedProject.name}" to same aspect as "${targetProject.name}"`);
+  return true;
+}
+
+function moveProjectToSpecificPosition(draggedData, targetData) {
+  const draggedProject = projects[draggedData.projectId];
+  if (!draggedProject) return false;
+  
+  const { aspect, insertIndex, insertBeforeProjectId } = targetData;
+  
+  // Don't move if already in correct position
+  if (draggedProject.theme === aspect) {
+    const aspectProjects = Object.values(projects)
+      .filter(p => p.theme === aspect && !p.parentId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    const currentIndex = aspectProjects.findIndex(p => p.id === draggedProject.id);
+    if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+      return false; // Already in correct position
+    }
+  }
+  
+  // Move project to target aspect
+  draggedProject.theme = aspect;
+  draggedProject.updatedAt = new Date().toISOString();
+  
+  // Calculate new order based on position
+  const aspectProjects = Object.values(projects)
+    .filter(p => p.theme === aspect && !p.parentId && p.id !== draggedProject.id)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  
+  let newOrder;
+  if (insertIndex === 0) {
+    // Insert at beginning
+    newOrder = aspectProjects.length > 0 ? aspectProjects[0].order - 1000 : 1000;
+  } else if (insertIndex >= aspectProjects.length) {
+    // Insert at end
+    newOrder = aspectProjects.length > 0 ? aspectProjects[aspectProjects.length - 1].order + 1000 : 1000;
+  } else {
+    // Insert between projects
+    const beforeOrder = aspectProjects[insertIndex - 1].order || 0;
+    const afterOrder = aspectProjects[insertIndex].order || 0;
+    newOrder = (beforeOrder + afterOrder) / 2;
+  }
+  
+  draggedProject.order = newOrder;
+  
+  console.log(`Moved project "${draggedProject.name}" to position ${insertIndex} in aspect "${aspect}"`);
+  return true;
+}
+
+function reorderProjectsInAspect(aspect, excludeProjectId) {
+  const aspectProjects = Object.values(projects)
+    .filter(p => p.theme === aspect && !p.parentId && p.id !== excludeProjectId)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  
+  // Reassign clean order values
+  aspectProjects.forEach((project, index) => {
+    project.order = (index + 1) * 1000;
+  });
+}
+
+// Aspect Management Functions
+function openAspectModal() {
+  const aspectModal = document.getElementById('aspect-modal');
+  aspectModal.classList.add('active');
+  renderAspectList();
+  clearAspectForm();
+}
+
+function closeAspectModal() {
+  const aspectModal = document.getElementById('aspect-modal');
+  aspectModal.classList.remove('active');
+  clearAspectForm();
+}
+
+function renderAspectList() {
+  const aspectList = document.getElementById('aspect-list');
+  aspectList.innerHTML = '';
+  
+  availableAspects.forEach(aspect => {
+    const projectCount = Object.values(projects).filter(p => (p.theme || 'General') === aspect).length;
+    const aspectItem = document.createElement('div');
+    aspectItem.className = 'aspect-item';
+    aspectItem.innerHTML = `
+      <div class="aspect-info">
+        <div class="aspect-color-indicator aspect-color-default"></div>
+        <div>
+          <div class="aspect-name">${escapeHtml(aspect)}</div>
+          <div class="aspect-project-count">${projectCount} project${projectCount !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      <div class="aspect-actions">
+        <button class="aspect-edit-btn" onclick="editAspect('${aspect}')">
+          <i class="fas fa-edit"></i> Edit
+        </button>
+        <button class="aspect-delete-btn" onclick="deleteAspect('${aspect}')" ${aspect === 'General' ? 'disabled title="Cannot delete default aspect"' : ''}>
+          <i class="fas fa-trash"></i> Delete
+        </button>
+      </div>
+    `;
+    aspectList.appendChild(aspectItem);
+  });
+}
+
+function clearAspectForm() {
+  document.getElementById('aspect-form').reset();
+  document.getElementById('aspect-form-title').textContent = 'Add New Aspect';
+  document.getElementById('save-aspect-btn').textContent = 'Save Aspect';
+  delete document.getElementById('aspect-form').dataset.editAspect;
+}
+
+function editAspect(aspectName) {
+  document.getElementById('aspect-name').value = aspectName;
+  document.getElementById('aspect-form-title').textContent = 'Edit Aspect';
+  document.getElementById('save-aspect-btn').textContent = 'Update Aspect';
+  document.getElementById('aspect-form').dataset.editAspect = aspectName;
+}
+
+function deleteAspect(aspectName) {
+  if (aspectName === 'General') {
+    alert('Cannot delete the default "General" aspect.');
+    return;
+  }
+  
+  const projectsWithAspect = Object.values(projects).filter(p => p.theme === aspectName);
+  
+  if (projectsWithAspect.length > 0) {
+    const confirmMessage = `This aspect contains ${projectsWithAspect.length} project(s). They will be moved to the "General" aspect. Continue?`;
+    if (!confirm(confirmMessage)) return;
+    
+    // Move projects to General aspect
+    projectsWithAspect.forEach(project => {
+      project.theme = 'General';
+    });
+  }
+  
+  // Remove aspect from available aspects
+  availableAspects = availableAspects.filter(a => a !== aspectName);
+  
+  // Remove from collapsed state
+  delete aspectCollapsedState[aspectName];
+  
+  saveState();
+  renderAspectList();
+  updateProjectThemeOptions();
+  updateDisplay();
+  
+  showNativeNotification('Aspect Deleted', `"${aspectName}" aspect has been deleted.`);
+}
+
+function handleAspectSubmit(e) {
+  e.preventDefault();
+  
+  const aspectName = document.getElementById('aspect-name').value.trim();
+  if (!aspectName) return;
+  
+  const editingAspect = document.getElementById('aspect-form').dataset.editAspect;
+  
+  if (editingAspect) {
+    // Update existing aspect
+    if (editingAspect === 'General' && aspectName !== 'General') {
+      alert('Cannot rename the default "General" aspect.');
+      return;
+    }
+    
+    if (aspectName !== editingAspect && availableAspects.includes(aspectName)) {
+      alert('An aspect with this name already exists.');
+      return;
+    }
+    
+    // Update aspect name in availableAspects
+    const index = availableAspects.indexOf(editingAspect);
+    if (index !== -1) {
+      availableAspects[index] = aspectName;
+    }
+    
+    // Update all projects with this aspect
+    Object.values(projects).forEach(project => {
+      if (project.theme === editingAspect) {
+        project.theme = aspectName;
+      }
+    });
+    
+    // Update collapsed state
+    if (aspectCollapsedState[editingAspect]) {
+      aspectCollapsedState[aspectName] = aspectCollapsedState[editingAspect];
+      delete aspectCollapsedState[editingAspect];
+    }
+    
+    showNativeNotification('Aspect Updated', `Aspect renamed to "${aspectName}".`);
+  } else {
+    // Add new aspect
+    if (availableAspects.includes(aspectName)) {
+      alert('An aspect with this name already exists.');
+      return;
+    }
+    
+    availableAspects.push(aspectName);
+    showNativeNotification('Aspect Added', `New aspect "${aspectName}" has been added.`);
+  }
+  
+  saveState();
+  renderAspectList();
+  updateProjectThemeOptions();
+  updateDisplay();
+  clearAspectForm();
+}
+
+function updateProjectThemeOptions() {
+  const projectThemeSelect = document.getElementById('project-theme');
+  if (!projectThemeSelect) return;
+  
+  const currentValue = projectThemeSelect.value;
+  projectThemeSelect.innerHTML = '';
+  
+  availableAspects.forEach(aspect => {
+    const option = document.createElement('option');
+    option.value = aspect;
+    option.textContent = aspect;
+    if (aspect === currentValue) option.selected = true;
+    projectThemeSelect.appendChild(option);
+  });
+  
+  // If current value no longer exists, select General
+  if (!availableAspects.includes(currentValue)) {
+    projectThemeSelect.value = 'General';
+  }
+}
+
+// Dashboard Title Editing Functions
+function editDashboardTitle() {
+  const titleElement = document.getElementById('dashboard-title');
+  const currentTitle = titleElement.textContent;
+  
+  // Create input element
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentTitle;
+  input.className = 'dashboard-title-input';
+  input.style.cssText = `
+    background: var(--card-bg);
+    border: 2px solid var(--accent-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    font-family: inherit;
+    width: auto;
+    min-width: 300px;
+  `;
+  
+  // Replace title with input
+  titleElement.style.display = 'none';
+  titleElement.parentNode.insertBefore(input, titleElement.nextSibling);
+  input.focus();
+  input.select();
+  
+  // Handle save
+  function saveTitleEdit() {
+    const newTitle = input.value.trim();
+    if (newTitle && newTitle !== currentTitle) {
+      dashboardTitle = newTitle;
+      titleElement.textContent = newTitle;
+      saveState();
+      showNativeNotification('Title Updated', `Dashboard title changed to "${newTitle}".`);
+    }
+    
+    titleElement.style.display = 'inline';
+    input.remove();
+  }
+  
+  // Handle cancel
+  function cancelTitleEdit() {
+    titleElement.style.display = 'inline';
+    input.remove();
+  }
+  
+  // Event listeners
+  input.addEventListener('blur', saveTitleEdit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveTitleEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelTitleEdit();
+    }
+  });
 }
 
 // Initialize the application when DOM is loaded

@@ -3,15 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Campbell's Productivity Dashboard</title>
+  <title>Productivity Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header class="dashboard-header">
-    <h1><i class="fas fa-chart-line"></i> Campbell's Productivity Dashboard</h1>
+    <h1>
+      <i class="fas fa-tasks"></i> 
+      <span id="dashboard-title" onclick="editDashboardTitle()" title="Click to edit title">Productivity Dashboard</span>
+    </h1>
     <div class="header-actions">
+      <button id="manage-aspects-btn" class="secondary-btn" title="Manage Aspects">
+        <i class="fas fa-cogs"></i> Aspects
+      </button>
       <button id="add-project-btn" class="primary-btn">
         <i class="fas fa-plus"></i> New Project
       </button>
@@ -41,6 +47,24 @@
       </button>
     </div>
   </header>
+
+  <!-- Floating Timer Widget -->
+  <div id="floating-timer" class="floating-timer hidden">
+    <div class="floating-timer-content">
+      <div class="floating-timer-display">
+        <i class="fas fa-stopwatch"></i>
+        <span id="floating-timer-text">00:00</span>
+      </div>
+      <div class="floating-timer-controls">
+        <button id="floating-pause-btn" class="floating-timer-btn" title="Pause/Resume">
+          <i class="fas fa-pause"></i>
+        </button>
+        <button id="floating-stop-btn" class="floating-timer-btn" title="Stop">
+          <i class="fas fa-stop"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <div class="dashboard-container">
     <!-- Project View -->
@@ -419,7 +443,7 @@
             <input type="number" id="project-estimated-time" step="0.5" min="0" placeholder="0">
           </div>
           <div class="form-group">
-            <label for="project-theme">Theme</label>
+            <label for="project-theme">Aspect</label>
             <select id="project-theme" required>
               <option value="General">General</option>
               <option value="PhD">PhD</option>
@@ -441,6 +465,52 @@
       <div class="modal-footer">
         <button type="button" class="secondary-btn" id="cancel-btn">Cancel</button>
         <button type="submit" form="project-form" class="primary-btn" id="save-btn">Save Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aspect Management Modal -->
+  <div class="modal" id="aspect-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="aspect-modal-title">Manage Aspects</h2>
+        <span class="close" id="close-aspect-modal">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="aspect-management-section">
+          <div class="existing-aspects">
+            <h3>Current Aspects</h3>
+            <div class="aspect-list" id="aspect-list">
+              <!-- Aspects will be populated here -->
+            </div>
+          </div>
+          
+          <div class="add-aspect-section">
+            <h3 id="aspect-form-title">Add New Aspect</h3>
+            <form id="aspect-form">
+              <div class="form-group">
+                <label for="aspect-name">Aspect Name</label>
+                <input type="text" id="aspect-name" placeholder="Enter aspect name" required>
+              </div>
+              <div class="form-group">
+                <label for="aspect-color">Color Theme (Optional)</label>
+                <select id="aspect-color">
+                  <option value="default">Default Blue</option>
+                  <option value="purple">Purple</option>
+                  <option value="pink">Pink</option>
+                  <option value="cyan">Cyan</option>
+                  <option value="green">Green</option>
+                  <option value="orange">Orange</option>
+                  <option value="red">Red</option>
+                </select>
+              </div>
+            </form>
+            <div class="aspect-form-buttons">
+              <button type="button" class="secondary-btn" id="cancel-aspect-btn">Cancel</button>
+              <button type="submit" form="aspect-form" class="primary-btn" id="save-aspect-btn">Save Aspect</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
