@@ -1529,6 +1529,67 @@ body {
   }
 }
 
+/* Help Modal: Getting Started steps */
+.help-content .bullet-list {
+  margin: 0.25rem 0; /* tighter wrapper spacing */
+}
+
+.help-content .bullet-list ul {
+  margin: 0.25rem 0; /* reduce default UL margins */
+  padding-left: 1.25rem; /* consistent indent */
+}
+
+.help-content .bullet-list li {
+  margin: 0.25rem 0; /* reduce vertical gap between items */
+}
+
+.help-section p + .bullet-list {
+  margin-top: 0.25rem; /* trim space when a list follows a paragraph */
+}
+
+.help-content .bullet-list + p {
+  margin-top: 0.5rem; /* modest space after list before next paragraph */
+}
+
+.help-content .steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.help-content .step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.help-content .step-number {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff !important; /* ensure visible even in dark theme */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.help-content .step-content {
+  color: #2c3e50;
+}
+
+[data-theme="dark"] .help-content .step-content {
+  color: #ecf0f1;
+}
+
+[data-theme="dark"] .help-content .step-number {
+  box-shadow: 0 2px 6px rgba(255,255,255,0.08);
+}
+
 /* Drag and Drop Styles */
 .task-item, .subtask-item {
   cursor: grab;
@@ -2432,6 +2493,269 @@ body {
 
 :root[data-theme="dark"] .month-day[data-level="4"] {
   background: rgba(139, 164, 242, 0.9);
+}
+
+
+/* Help Modal Styles */
+.help-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.help-section {
+  margin-bottom: 2rem;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section h4 {
+  color: var(--accent-color);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.help-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-section li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+  line-height: 1.5;
+}
+
+.help-section li:last-child {
+  border-bottom: none;
+}
+
+.help-section strong {
+  color: var(--accent-color);
+}
+
+.help-intro {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.help-intro h4 {
+  color: white;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.help-intro p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.help-intro p:last-child {
+  margin-bottom: 0;
+}
+
+.help-section ol {
+  list-style: none;
+  counter-reset: step-counter;
+  padding: 0;
+  margin: 0;
+}
+
+.help-section ol li {
+  counter-increment: step-counter;
+  padding: 0.75rem 0;
+  position: relative;
+  padding-left: 2.5rem;
+  border-bottom: 1px solid var(--border-color);
+  line-height: 1.5;
+}
+
+.help-section ol li::before {
+  content: counter(step-counter);
+  position: absolute;
+  left: 0;
+  top: 0.75rem;
+  background: var(--accent-color);
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.help-section ol li:last-child {
+  border-bottom: none;
+}
+
+/* Steps List Styling */
+.steps-list {
+  margin: 1.5rem 0;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.step-item:last-child {
+  border-bottom: none;
+}
+
+.step-number {
+  background: var(--accent-color);
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content {
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* Bullet List Separation */
+.bullet-list {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--secondary-background);
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-color);
+}
+
+.bullet-list ul {
+  margin: 0;
+}
+
+/* Heatmap Navigation Styles */
+.heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.heatmap-navigation {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.heatmap-nav-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.heatmap-nav-btn:hover {
+  background: var(--accent-secondary);
+  transform: scale(1.05);
+}
+
+.heatmap-nav-btn:disabled {
+  background: var(--border-color);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.heatmap-month-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  min-width: 140px;
+  text-align: center;
+}
+
+.incubation-heatmap.single-month {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.single-month-heatmap {
+  width: 100%;
+}
+
+.single-month-heatmap .month-day-headers {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.single-month-heatmap .day-header {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 4px;
+}
+
+.single-month-heatmap .month-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.single-month-heatmap .month-day {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.single-month-heatmap .month-day:hover {
+  transform: scale(1.1);
+}
+
+.single-month-heatmap .month-day.empty {
+  visibility: hidden;
+}
+
+@media (max-width: 768px) {
+  .heatmap-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .heatmap-navigation {
+    order: -1;
+  }
 }
 
 /* Responsive heatmap */

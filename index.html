@@ -45,6 +45,9 @@
       <button id="redo-btn" class="secondary-btn" title="Redo (Ctrl+Shift+Z)">
         <i class="fas fa-redo"></i>
       </button>
+      <button id="help-btn" class="secondary-btn" title="Help & Features">
+        <i class="fas fa-question-circle"></i>
+      </button>
     </div>
   </header>
 
@@ -358,7 +361,18 @@
             <!-- Insights Tab -->
             <div class="stats-tab-content" id="insights-tab">
               <div class="insights-section">
-                <h4><i class="fas fa-fire"></i> Incubation Heatmap</h4>
+                <div class="heatmap-header">
+                  <h4><i class="fas fa-fire"></i> Incubation Heatmap</h4>
+                  <div class="heatmap-navigation">
+                    <button id="heatmap-prev-month" class="heatmap-nav-btn" title="Previous month">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="heatmap-current-month" class="heatmap-month-title">January 2024</span>
+                    <button id="heatmap-next-month" class="heatmap-nav-btn" title="Next month">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
                 <p class="section-description">Visualize your idea generation patterns over time</p>
                 <div class="heatmap-container">
                   <div class="heatmap-legend">
@@ -372,7 +386,7 @@
                     </div>
                     <span>More</span>
                   </div>
-                  <div id="incubation-heatmap" class="incubation-heatmap"></div>
+                  <div id="incubation-heatmap" class="incubation-heatmap single-month"></div>
                 </div>
               </div>
               <div class="insights-grid">
@@ -511,6 +525,120 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="help-modal" class="modal">
+    <div class="modal-content large">
+      <div class="modal-header">
+        <h3><i class="fas fa-question-circle"></i> Dashboard Help & Features</h3>
+        <button class="close-btn" id="close-help">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="help-content">
+          <div class="help-intro">
+            <h4><i class="fas fa-lightbulb"></i> What is the Productivity Dashboard?</h4>
+            <p>This app is designed for <strong>anyone who wants to stay organized and get things done</strong>. Whether you're managing work projects, personal goals, side businesses, or exploring new ideas, this dashboard helps you keep track of everything without feeling overwhelmed.</p>
+            <p><strong>The key insight:</strong> Not all tasks are the same. Some things need your attention right now, while others are ideas for the future. This app separates your <em>active tasks</em> from your <em>future ideas</em> so you can focus on what matters today.</p>
+          </div>
+
+          <div class="help-section">
+            <h4><i class="fas fa-rocket"></i> How It Works: The Two-Track System</h4>
+            <p>The dashboard uses a simple but powerful concept:</p>
+            <div class="bullet-list">
+              <ul>
+                <li><strong>Execution Track:</strong> Projects and tasks you're actively working on right now</li>
+                <li><strong>Incubation Track:</strong> Ideas, future projects, and things to explore later</li>
+              </ul>
+            </div>
+            <p>This prevents great ideas from cluttering your daily workflow while ensuring they don't get forgotten.</p>
+          </div>
+          
+          <div class="help-section">
+            <h4><i class="fas fa-play-circle"></i> Getting Started: Your First Steps</h4>
+            <div class="steps-list">
+              <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                  <strong>Create Themes:</strong> Click "Aspects" to create categories like Work, Personal, Side Projects, etc.
+                </div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                  <strong>Add Projects:</strong> Use "New Project" to create your first project in any theme
+                </div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                  <strong>Choose Status:</strong> Mark each project as "Execution" (active) or "Incubation" (future)
+                </div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                  <strong>Add Tasks:</strong> Break projects into actionable tasks with due dates and priorities
+                </div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                  <strong>Start Focusing:</strong> Use Focus Mode to concentrate on what's due and important
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="help-section">
+            <h4><i class="fas fa-brain"></i> The Secret Sauce: Focus Mode</h4>
+            <p>This is where the magic happens. Focus Mode shows you:</p>
+            <div class="bullet-list">
+              <ul>
+                <li><strong>Overdue Tasks:</strong> What needs immediate attention</li>
+                <li><strong>Due Today:</strong> Your daily commitments</li>
+                <li><strong>Execution Board:</strong> All your active project tasks</li>
+              </ul>
+            </div>
+            <p><strong>The focus timer continues running even when you switch apps</strong> - perfect for writing, planning, or any deep work that requires jumping between tools.</p>
+          </div>
+          
+          <div class="help-section">
+            <h4><i class="fas fa-eye"></i> Three Ways to View Your Work</h4>
+            <div class="bullet-list">
+              <ul>
+                <li><strong>Project View:</strong> See all projects organized by themes (Work, Personal, etc.) - great for planning</li>
+                <li><strong>Board View:</strong> Kanban-style cards showing Execution vs Incubation - perfect for quick triage</li>
+                <li><strong>Focus Mode:</strong> Distraction-free view of what needs your attention today - ideal for deep work</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="help-section">
+            <h4><i class="fas fa-chart-line"></i> Track Your Progress</h4>
+            <p>The dashboard shows you patterns in your work:</p>
+            <div class="bullet-list">
+              <ul>
+                <li><strong>Daily Stats:</strong> Tasks completed, time focused, productivity streaks</li>
+                <li><strong>Monthly Heatmaps:</strong> Visualize when you're most active with ideas and execution</li>
+                <li><strong>Goals:</strong> Set long-term objectives and track progress</li>
+              </ul>
+            </div>
+            <p>This helps you understand your natural rhythms and optimize accordingly.</p>
+          </div>
+          
+          <div class="help-section">
+            <h4><i class="fas fa-shield-alt"></i> Your Data Stays Private</h4>
+            <p>Everything is stored locally on your computer. No internet required, no data shared, complete privacy. Your productivity insights are yours alone.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="close-help-footer" class="primary-btn">Got It!</button>
       </div>
     </div>
   </div>

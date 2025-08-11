@@ -183,6 +183,17 @@ function updateDashboardTitleDisplay() {
   }
 }
 
+// Help System
+function showHelpModal() {
+  const helpModal = document.getElementById('help-modal');
+  helpModal.classList.add('active');
+}
+
+function closeHelpModal() {
+  const helpModal = document.getElementById('help-modal');
+  helpModal.classList.remove('active');
+}
+
 function init() {
   loadState();
   loadDailyStats();
@@ -214,6 +225,7 @@ function init() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
+  
 }
 
 // Event Listeners
@@ -224,6 +236,22 @@ function setupEventListeners() {
   goalsToggle.addEventListener('click', showGoalsModal);
   themeToggle.addEventListener('click', toggleTheme);
   statsToggle.addEventListener('click', showStats);
+  
+  // Help button listeners
+  const helpBtn = document.getElementById('help-btn');
+  const closeHelp = document.getElementById('close-help');
+  const closeHelpFooter = document.getElementById('close-help-footer');
+  
+  if (helpBtn) helpBtn.addEventListener('click', showHelpModal);
+  if (closeHelp) closeHelp.addEventListener('click', closeHelpModal);
+  if (closeHelpFooter) closeHelpFooter.addEventListener('click', closeHelpModal);
+  
+  // Heatmap navigation listeners
+  const heatmapPrevBtn = document.getElementById('heatmap-prev-month');
+  const heatmapNextBtn = document.getElementById('heatmap-next-month');
+  
+  if (heatmapPrevBtn) heatmapPrevBtn.addEventListener('click', () => navigateHeatmapMonth(-1));
+  if (heatmapNextBtn) heatmapNextBtn.addEventListener('click', () => navigateHeatmapMonth(1));
   
   // Undo/Redo button listeners
   const undoBtn = document.getElementById('undo-btn');
@@ -2840,14 +2868,89 @@ function trackIncubationActivity() {
 }
 
 // Incubation Heatmap Functions
+let currentHeatmapMonth = new Date();
+
 function renderIncubationHeatmap() {
   const heatmapContainer = document.getElementById('incubation-heatmap');
   if (!heatmapContainer) return;
 
-  const today = new Date();
-  const monthlyHeatmapHTML = generateMonthlyHeatmapHTML(today);
+  renderSingleMonthHeatmap(currentHeatmapMonth);
+  updateHeatmapNavigation();
+}
+
+function renderSingleMonthHeatmap(monthDate) {
+  const heatmapContainer = document.getElementById('incubation-heatmap');
+  const monthData = generateMonthData(monthDate);
+  const monthHTML = generateSingleMonthHTML(monthData, monthDate);
   
-  heatmapContainer.innerHTML = monthlyHeatmapHTML;
+  heatmapContainer.innerHTML = monthHTML;
+}
+
+function updateHeatmapNavigation() {
+  const monthTitle = document.getElementById('heatmap-current-month');
+  const prevBtn = document.getElementById('heatmap-prev-month');
+  const nextBtn = document.getElementById('heatmap-next-month');
+  
+  if (!monthTitle) return;
+  
+  // Update month title
+  monthTitle.textContent = currentHeatmapMonth.toLocaleDateString('en-US', { 
+    month: 'long', 
+    year: 'numeric' 
+  });
+  
+  // Update navigation buttons
+  const now = new Date();
+  const firstDataMonth = new Date(2024, 0); // Assuming app started in 2024
+  
+  if (prevBtn) {
+    prevBtn.disabled = currentHeatmapMonth <= firstDataMonth;
+  }
+  
+  if (nextBtn) {
+    nextBtn.disabled = currentHeatmapMonth >= now;
+  }
+}
+
+function navigateHeatmapMonth(direction) {
+  const newMonth = new Date(currentHeatmapMonth);
+  newMonth.setMonth(newMonth.getMonth() + direction);
+  
+  currentHeatmapMonth = newMonth;
+  renderSingleMonthHeatmap(currentHeatmapMonth);
+  updateHeatmapNavigation();
+}
+
+function generateSingleMonthHTML(data, monthDate) {
+  let html = `<div class="single-month-heatmap">`;
+  
+  // Add day headers
+  html += `<div class="month-day-headers">`;
+  ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(day => {
+    html += `<div class="day-header">${day}</div>`;
+  });
+  html += `</div>`;
+  
+  // Add calendar grid
+  html += `<div class="month-calendar">`;
+  data.forEach((day, index) => {
+    if (day) {
+      const date = new Date(day.date);
+      const title = `${date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric',
+        year: 'numeric'
+      })}: ${day.count} ideas added`;
+      html += `<div class="month-day" data-level="${day.level}" title="${title}">${day.day}</div>`;
+    } else {
+      html += `<div class="month-day empty"></div>`;
+    }
+  });
+  html += `</div>`;
+  html += `</div>`;
+  
+  return html;
 }
 
 function generateHeatmapData(startDate, endDate) {
