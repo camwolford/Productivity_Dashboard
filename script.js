@@ -43,6 +43,12 @@ let pomodoroSession = {
 
 let currentTheme = 'light'; // 'light' or 'dark'
 
+// Day change detection system
+let dayChangeDetector = {
+  lastCheckedDate: null,
+  checkInterval: null
+};
+
 let dailyPlanning = {
   lastPlanningDate: null,
   plannedTasks: [],
@@ -103,12 +109,16 @@ function init() {
   loadDailyPlanning();
   loadAnalyticsData();
   loadGoals();
+  loadDayChangeDetector();
   setupEventListeners();
   updateDisplay();
   updateDailyStats();
   
   // Initialize undo/redo system
   initializeUndoRedo();
+  
+  // Initialize day change detection
+  initializeDayChangeDetector();
   
   // Check if daily planning is needed
   checkDailyPlanning();
@@ -1609,7 +1619,7 @@ function saveDailyStats() {
 }
 
 function updateDailyStats() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getCurrentDateString();
   
   // Reset daily stats if it's a new day
   if (dailyStats.lastActiveDate !== today) {
@@ -1642,6 +1652,87 @@ function updateDailyStats() {
   dailyStats.completedToday = completedToday;
   saveDailyStats();
 }
+
+// Day Change Detection Functions
+function getCurrentDateString() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function initializeDayChangeDetector() {
+  dayChangeDetector.lastCheckedDate = getCurrentDateString();
+  
+  // Check for day change every minute
+  dayChangeDetector.checkInterval = setInterval(checkForDayChange, 60000);
+  
+  // Also check on page visibility change (when user returns to tab)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkForDayChange();
+    }
+  });
+}
+
+function checkForDayChange() {
+  const currentDate = getCurrentDateString();
+  
+  if (dayChangeDetector.lastCheckedDate && dayChangeDetector.lastCheckedDate !== currentDate) {
+    console.log('Day change detected:', dayChangeDetector.lastCheckedDate, '->', currentDate);
+    handleDayChange(currentDate);
+  }
+  
+  dayChangeDetector.lastCheckedDate = currentDate;
+  saveDayChangeDetector();
+}
+
+function handleDayChange(newDate) {
+  // Reset focus session data for new day
+  if (focusSession.lastSessionDate !== newDate) {
+    focusSession.sessionsToday = 0;
+    focusSession.lastSessionDate = newDate;
+    saveFocusStats();
+  }
+  
+  // Reset daily stats for new day (this will handle streak calculation)
+  updateDailyStats();
+  
+  // Reset daily planning for new day
+  if (dailyPlanning.lastPlanningDate !== newDate) {
+    dailyPlanning.hasDailyPlan = false;
+    dailyPlanning.plannedTasks = [];
+    dailyPlanning.lastPlanningDate = newDate;
+    saveDailyPlanning();
+  }
+  
+  // Update analytics data for new day
+  updateAnalyticsData();
+  
+  // Update display to reflect new day
+  updateDisplay();
+  updateFocusStats();
+  
+  console.log('Day change handled successfully for date:', newDate);
+}
+
+// Test function for day change detection (for development/testing purposes)
+function testDayChange() {
+  console.log('Testing day change functionality...');
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  console.log('Current focus sessions today:', focusSession.sessionsToday);
+  console.log('Current completed today:', dailyStats.completedToday);
+  
+  handleDayChange(tomorrowStr);
+  
+  console.log('After day change:');
+  console.log('Focus sessions today should be 0:', focusSession.sessionsToday);
+  console.log('Completed today should be 0:', dailyStats.completedToday);
+  console.log('Test completed. You can call this function from browser console: testDayChange()');
+}
+
+// Make test function available globally
+window.testDayChange = testDayChange;
 
 function updateFocusStats() {
   document.getElementById('completed-today').textContent = dailyStats.completedToday;
@@ -1707,6 +1798,9 @@ function stopTimer() {
 function startFocusSession() {
   if (focusSession.isActive) return;
   
+  // Check for day change before starting session
+  checkForDayChange();
+  
   focusSession.isActive = true;
   focusSession.isPaused = false;
   focusSession.startTime = Date.now();
@@ -1716,8 +1810,8 @@ function startFocusSession() {
     focusSession.currentTime = 0;
   }
   
-  // Update daily stats
-  const today = new Date().toISOString().split('T')[0];
+  // Update daily stats (day change check above ensures this is current)
+  const today = getCurrentDateString();
   if (focusSession.lastSessionDate !== today) {
     focusSession.sessionsToday = 0;
     focusSession.lastSessionDate = today;
@@ -1793,6 +1887,9 @@ function pauseFocusSession() {
 
 function resumeFocusSession() {
   if (focusSession.isActive || !focusSession.isPaused) return;
+  
+  // Check for day change before resuming session
+  checkForDayChange();
   
   focusSession.isActive = true;
   focusSession.isPaused = false;
@@ -1880,6 +1977,20 @@ function loadFocusStats() {
       focusSession.currentTime = 0;
     }
   }
+}
+
+function loadDayChangeDetector() {
+  const saved = localStorage.getItem('productivity_day_change_detector');
+  if (saved) {
+    const savedData = JSON.parse(saved);
+    dayChangeDetector.lastCheckedDate = savedData.lastCheckedDate;
+  }
+}
+
+function saveDayChangeDetector() {
+  localStorage.setItem('productivity_day_change_detector', JSON.stringify({
+    lastCheckedDate: dayChangeDetector.lastCheckedDate
+  }));
 }
 
 // Pomodoro Timer Functions
