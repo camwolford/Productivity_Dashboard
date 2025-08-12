@@ -257,6 +257,10 @@ To test the pause/resume functionality:
    - Updated `addSubtask()` and `editSubtask()` to use improved prompts
    - Consistent error handling and user experience
 
+5. **Subtask Display Fix**:
+   - Removed outdated `.subtask-list` and `.subtask-item` styles
+   - Ensures current subtask formatting renders correctly in app builds
+
 ### Key Technical Changes
 - **CSS Classes**: Added professional styling classes for consistency
 - **Modal System**: Unified all task operations under professional modal interface  
