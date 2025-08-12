@@ -1457,40 +1457,46 @@ function createTaskHTML(project, task) {
   return `
     <div class="task-item drop-zone ${task.completed ? 'completed' : ''} ${plannedClass}" 
          data-task-id="${task.id}" data-project-id="${project.id}">
-      <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
-             onchange="toggleTask('${project.id}', '${task.id}')">
-      <span class="task-text">${escapeHtml(task.description)} ${progressText}</span>
-      <div class="task-actions">
-        <button onclick="startPomodoroSession('${project.id}', '${task.id}')" title="Start Pomodoro (25 min)" class="pomodoro-btn">
-          <i class="fas fa-tomato">🍅</i>
-        </button>
-        <button onclick="editTask('${project.id}', '${task.id}')" title="Edit task">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask" class="add-subtask-btn">
-          <i class="fas fa-plus"></i>
-        </button>
-        <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </div>
-    ${task.subtasks ? task.subtasks.map(subtask => `
-      <div class="subtask-item drop-zone ${subtask.completed ? 'completed' : ''}" 
-           data-subtask-id="${subtask.id}" data-task-id="${task.id}" data-project-id="${project.id}">
-        <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''} 
-               onchange="toggleSubtask('${project.id}', '${task.id}', '${subtask.id}')">
-        <span class="task-text">${escapeHtml(subtask.description)}</span>
+      <div class="task-content">
+        <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
+               onchange="toggleTask('${project.id}', '${task.id}')">
+        <span class="task-text">${escapeHtml(task.description)} ${progressText}</span>
         <div class="task-actions">
-          <button onclick="editSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Edit subtask" class="edit-subtask-btn">
+          <button onclick="startPomodoroSession('${project.id}', '${task.id}')" title="Start Pomodoro (25 min)" class="pomodoro-btn">
+            <i class="fas fa-tomato">🍅</i>
+          </button>
+          <button onclick="editTask('${project.id}', '${task.id}')" title="Edit task">
             <i class="fas fa-edit"></i>
           </button>
-          <button onclick="deleteSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Delete subtask">
+          <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask" class="add-subtask-btn">
+            <i class="fas fa-plus"></i>
+          </button>
+          <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
             <i class="fas fa-trash"></i>
           </button>
         </div>
       </div>
-    `).join('') : ''}
+      ${task.subtasks && task.subtasks.length > 0 ? `
+        <div class="subtask-list">
+          ${task.subtasks.map(subtask => `
+            <div class="subtask-item drop-zone ${subtask.completed ? 'completed' : ''}" 
+                 data-subtask-id="${subtask.id}" data-task-id="${task.id}" data-project-id="${project.id}">
+              <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''} 
+                     onchange="toggleSubtask('${project.id}', '${task.id}', '${subtask.id}')">
+              <span class="task-text">${escapeHtml(subtask.description)}</span>
+              <div class="task-actions">
+                <button onclick="editSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Edit subtask" class="edit-subtask-btn">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Delete subtask">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>
   `;
 }
 
@@ -1616,7 +1622,7 @@ function createTaskElement(project, task) {
         </button>
       </div>
     </div>
-    ${subtasksHtml}
+    ${task.subtasks && task.subtasks.length > 0 ? `<div class="board-subtask-list">${subtasksHtml}</div>` : ''}
   `;
   
   return li;

@@ -321,18 +321,36 @@ body {
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+  min-width: 0; /* Allow flex items to shrink */
+}
+
+.board-subtask-list {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
 }
 
 .board-subtask-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.5rem 0.5rem 2rem;
+  padding: 0.4rem 0.5rem;
   background: rgba(0, 0, 0, 0.05);
   margin-top: 0.25rem;
-  border-left: 3px solid #ddd;
+  border-left: 2px solid #ddd;
   border-radius: 0 4px 4px 0;
-  font-size: 0.9em;
+  font-size: 0.85em;
+  position: relative;
+}
+
+.board-subtask-item::before {
+  content: "└";
+  position: absolute;
+  left: -1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #bdc3c7;
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 .board-subtask-item.completed {
@@ -342,6 +360,9 @@ body {
 .board-subtask-item .subtask-text {
   flex: 1;
   color: #666;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0; /* Allow text to wrap properly */
 }
 
 .board-subtask-item.completed .subtask-text {
@@ -370,31 +391,42 @@ body {
 }
 
 /* Improved Subtask Formatting in Project View */
+.task-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.subtask-list {
+  margin-top: 0.5rem;
+  padding-left: 2rem;
+}
+
 .subtask-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  padding: 0.4rem 0.5rem;
   margin-top: 0.25rem;
-  background: rgba(0, 0, 0, 0.02);
-  border-left: 3px solid #e0e6ed;
-  border-radius: 0 8px 8px 0;
+  background: rgba(243, 248, 252, 0.6);
+  border-left: 2px solid #e0e6ed;
+  border-radius: 0 6px 6px 0;
   position: relative;
 }
 
 .subtask-item::before {
   content: "└";
   position: absolute;
-  left: 1.2rem;
-  top: 0.5rem;
-  color: #bdc3c7;
+  left: -1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #95a5a6;
   font-weight: bold;
   font-size: 1rem;
 }
 
 .subtask-item .task-text {
   flex: 1;
-  margin-left: 0.5rem;
   font-size: 0.9em;
   color: #555;
 }
@@ -421,8 +453,7 @@ body {
 /* Focus View Subtask Styling */
 .focus-subtasks {
   margin-top: 0.75rem;
-  padding-left: 1rem;
-  border-left: 2px solid #e9ecef;
+  padding-left: 2rem;
 }
 
 .focus-subtask-item {
@@ -430,10 +461,23 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.5rem;
-  margin: 0.25rem 0;
+  margin-top: 0.25rem;
   background: rgba(0, 0, 0, 0.03);
-  border-radius: 6px;
+  border-left: 2px solid #e9ecef;
+  border-radius: 0 6px 6px 0;
   font-size: 0.9em;
+  position: relative;
+}
+
+.focus-subtask-item::before {
+  content: "└";
+  position: absolute;
+  left: -1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #bdc3c7;
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 .focus-subtask-item.completed {
@@ -851,13 +895,6 @@ body {
 .subtask-list {
   margin-left: 1rem;
   margin-top: 0.5rem;
-}
-
-.subtask-item {
-  background: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
-  padding: 0.5rem;
-  margin-bottom: 0.25rem;
 }
 
 /* Focus View Styles */
