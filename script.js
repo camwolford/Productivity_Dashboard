@@ -351,7 +351,23 @@ function setupEventListeners() {
       if (e.target === taskModal) closeTaskModal();
     });
   }
-  
+
+  // Subtask Modal Event Listeners
+  const subtaskModal = document.getElementById('subtask-modal');
+  const subtaskForm = document.getElementById('subtask-form');
+  const closeSubtaskModalBtn = document.getElementById('close-subtask-modal');
+  const cancelSubtaskBtn = document.getElementById('cancel-subtask-btn');
+
+  if (closeSubtaskModalBtn) closeSubtaskModalBtn.addEventListener('click', closeSubtaskModal);
+  if (cancelSubtaskBtn) cancelSubtaskBtn.addEventListener('click', closeSubtaskModal);
+  if (subtaskForm) subtaskForm.addEventListener('submit', handleSubtaskSubmit);
+
+  if (subtaskModal) {
+    subtaskModal.addEventListener('click', (e) => {
+      if (e.target === subtaskModal) closeSubtaskModal();
+    });
+  }
+
   statsModal.addEventListener('click', (e) => {
     if (e.target === statsModal) closeStatsModal();
   });
@@ -845,6 +861,92 @@ function handleTaskSubmit(e) {
   closeTaskModal();
 }
 
+function openSubtaskModal(projectId, taskId, subtaskId = null) {
+  const subtaskModal = document.getElementById('subtask-modal');
+  const subtaskForm = document.getElementById('subtask-form');
+
+  subtaskForm.dataset.projectId = projectId;
+  subtaskForm.dataset.taskId = taskId;
+  if (subtaskId) {
+    subtaskForm.dataset.subtaskId = subtaskId;
+  } else {
+    delete subtaskForm.dataset.subtaskId;
+  }
+
+  const project = projects[projectId];
+  const task = project ? project.tasks.find(t => t.id === taskId) : null;
+  const modalTitle = document.getElementById('subtask-modal-title');
+
+  if (subtaskId && task) {
+    const subtask = task.subtasks.find(st => st.id === subtaskId);
+    if (subtask) {
+      modalTitle.textContent = 'Edit Subtask';
+      document.getElementById('subtask-description').value = subtask.description;
+      document.getElementById('save-subtask-btn').textContent = 'Update Subtask';
+    }
+  } else {
+    modalTitle.textContent = 'Add Subtask';
+    document.getElementById('subtask-description').value = '';
+    document.getElementById('save-subtask-btn').textContent = 'Save Subtask';
+  }
+
+  subtaskModal.classList.add('active');
+
+  setTimeout(() => {
+    document.getElementById('subtask-description').focus();
+  }, 100);
+}
+
+function closeSubtaskModal() {
+  const subtaskModal = document.getElementById('subtask-modal');
+  const subtaskForm = document.getElementById('subtask-form');
+
+  subtaskModal.classList.remove('active');
+  subtaskForm.reset();
+  delete subtaskForm.dataset.projectId;
+  delete subtaskForm.dataset.taskId;
+  delete subtaskForm.dataset.subtaskId;
+}
+
+function handleSubtaskSubmit(e) {
+  e.preventDefault();
+
+  const subtaskForm = document.getElementById('subtask-form');
+  const projectId = subtaskForm.dataset.projectId;
+  const taskId = subtaskForm.dataset.taskId;
+  const subtaskId = subtaskForm.dataset.subtaskId;
+
+  if (!projectId || !taskId || !projects[projectId]) return;
+
+  const description = document.getElementById('subtask-description').value.trim();
+  if (!description) return;
+
+  const project = projects[projectId];
+  const task = project.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  if (subtaskId) {
+    const subtask = task.subtasks.find(st => st.id === subtaskId);
+    if (subtask) {
+      subtask.description = description;
+    }
+  } else {
+    const newSubtaskId = `subtask_${nextId++}`;
+    task.subtasks.push({
+      id: newSubtaskId,
+      description,
+      completed: false,
+      estimatedTime: 0,
+      actualTime: 0
+    });
+  }
+
+  project.updatedAt = new Date().toISOString();
+  saveState();
+  updateDisplay();
+  closeSubtaskModal();
+}
+
 function deleteProject(projectId) {
   const project = projects[projectId];
   if (!project) return;
@@ -954,47 +1056,11 @@ function deleteTask(projectId, taskId) {
 }
 
 function addSubtask(projectId, taskId) {
-  showCustomPrompt('Enter subtask description:', (description) => {
-    if (!description || !description.trim()) return;
-    
-    const project = projects[projectId];
-    if (project) {
-      const task = project.tasks.find(t => t.id === taskId);
-      if (task) {
-        const subtaskId = `subtask_${nextId++}`;
-        task.subtasks.push({
-          id: subtaskId,
-          description: description.trim(),
-          completed: false,
-          estimatedTime: 0,
-          actualTime: 0
-        });
-        project.updatedAt = new Date().toISOString();
-        saveState();
-        updateDisplay();
-      }
-    }
-  });
+  openSubtaskModal(projectId, taskId);
 }
 
 function editSubtask(projectId, taskId, subtaskId) {
-  const project = projects[projectId];
-  if (project) {
-    const task = project.tasks.find(t => t.id === taskId);
-    if (task) {
-      const subtask = task.subtasks.find(st => st.id === subtaskId);
-      if (subtask) {
-        showCustomPrompt('Edit subtask description:', (newDescription) => {
-          if (newDescription && newDescription.trim() && newDescription.trim() !== subtask.description) {
-            subtask.description = newDescription.trim();
-            project.updatedAt = new Date().toISOString();
-            saveState();
-            updateDisplay();
-          }
-        }, subtask.description);
-      }
-    }
-  }
+  openSubtaskModal(projectId, taskId, subtaskId);
 }
 
 function deleteSubtask(projectId, taskId, subtaskId) {
@@ -1380,7 +1446,7 @@ function createTaskHTML(project, task) {
           <i class="fas fa-edit"></i>
         </button>
         <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask" class="add-subtask-btn">
-          <i class="fas fa-plus"></i>
+          <i class="fas fa-plus"></i> Add Subtask
         </button>
         <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
           <i class="fas fa-trash"></i>

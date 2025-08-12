@@ -517,6 +517,30 @@
     </div>
   </div>
 
+  <!-- Subtask Modal -->
+  <div id="subtask-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="subtask-modal-title">Add Subtask</h3>
+        <button class="close-btn" id="close-subtask-modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="subtask-form">
+          <div class="form-group">
+            <label for="subtask-description">Subtask Description</label>
+            <input type="text" id="subtask-description" placeholder="Enter subtask description..." required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="secondary-btn" id="cancel-subtask-btn">Cancel</button>
+        <button type="submit" form="subtask-form" class="primary-btn" id="save-subtask-btn">Save Subtask</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Aspect Management Modal -->
   <div class="modal" id="aspect-modal">
     <div class="modal-content">
