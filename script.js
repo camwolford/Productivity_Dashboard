@@ -342,7 +342,7 @@ function setupEventListeners() {
     if (execButton) {
       e.preventDefault();
       e.stopPropagation();
-      addLegacyTask('Execution');
+      addBoardTask('Execution');
       return;
     }
     
@@ -351,7 +351,7 @@ function setupEventListeners() {
     if (incubButton) {
       e.preventDefault();
       e.stopPropagation();
-      addLegacyTask('Incubation');
+      addBoardTask('Incubation');
       return;
     }
     
@@ -958,26 +958,53 @@ function deleteSubtask(projectId, taskId, subtaskId) {
   }
 }
 
-// Legacy task management for board view
-function addLegacyTask(board) {
+// Board task management for adding tasks
+function addBoardTask(board) {
   showCustomPrompt('Enter task description:', (description) => {
     if (!description) return;
-    
-    const projectId = `legacy_${nextId++}`;
-    
-    projects[projectId] = {
-      id: projectId,
-      name: description.trim(),
-      description: '',
-      priority: 'medium',
-      status: board.toLowerCase(),
-      tasks: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    saveState();
-    updateDisplay();
+
+    showCustomPrompt('Enter project name:', (projectName) => {
+      if (!projectName) return;
+
+      const status = board.toLowerCase();
+      let project = Object.values(projects).find(
+        p => p.name.toLowerCase() === projectName.trim().toLowerCase()
+      );
+
+      if (!project) {
+        const projectId = `project_${nextId++}`;
+        project = {
+          id: projectId,
+          name: projectName.trim(),
+          description: '',
+          priority: 'medium',
+          status,
+          tasks: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        projects[projectId] = project;
+      } else {
+        project.status = status;
+      }
+
+      const taskId = `task_${nextId++}`;
+      const newTask = {
+        id: taskId,
+        description: description.trim(),
+        completed: false,
+        createdAt: new Date().toISOString(),
+        dueDate: null,
+        estimatedTime: 0,
+        actualTime: 0,
+        subtasks: []
+      };
+
+      project.tasks.push(newTask);
+      project.updatedAt = new Date().toISOString();
+      saveState();
+      updateDisplay();
+    });
   });
 }
 
