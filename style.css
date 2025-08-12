@@ -847,19 +847,6 @@ body {
   transition: width 0.3s ease;
 }
 
-/* Subtasks */
-.subtask-list {
-  margin-left: 1rem;
-  margin-top: 0.5rem;
-}
-
-.subtask-item {
-  background: rgba(255, 255, 255, 0.6);
-  font-size: 0.85rem;
-  padding: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
 /* Focus View Styles */
 .focus-header {
   background: rgba(255, 255, 255, 0.95);
