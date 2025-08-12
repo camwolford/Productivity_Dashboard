@@ -72,7 +72,7 @@ body {
 }
 
 /* Buttons */
-.primary-btn, .secondary-btn, .add-task-btn {
+.primary-btn, .secondary-btn, .add-task-btn, .cancel-btn {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 8px;
@@ -110,17 +110,17 @@ body {
 }
 
 .add-task-btn {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  border: 2px dashed rgba(102, 126, 234, 0.3);
-  width: 100%;
+  background: var(--card-background);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  width: fit-content;
   justify-content: center;
-  margin-top: 1rem;
+  margin: 1rem auto 0;
 }
 
 .add-task-btn:hover {
-  background: rgba(102, 126, 234, 0.2);
-  border-color: #667eea;
+  background: var(--accent-primary);
+  color: white;
 }
 
 /* Dashboard Container */
@@ -612,6 +612,26 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.cancel-btn {
+  background: var(--card-background);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  opacity: 0.9;
+}
+
+.cancel-btn:hover {
+  background: var(--accent-primary);
+  color: white;
+  opacity: 1;
 }
 
 /* Progress Indicators */
