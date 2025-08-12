@@ -1033,6 +1033,22 @@ function toggleTask(projectId, taskId) {
   }
 }
 
+function toggleSubtask(projectId, taskId, subtaskId) {
+  const project = projects[projectId];
+  if (project) {
+    const task = project.tasks.find(t => t.id === taskId);
+    if (task) {
+      const subtask = task.subtasks.find(st => st.id === subtaskId);
+      if (subtask) {
+        subtask.completed = !subtask.completed;
+        project.updatedAt = new Date().toISOString();
+        saveState();
+        updateDisplay(); // This will refresh the progress indicators
+      }
+    }
+  }
+}
+
 function editTask(projectId, taskId) {
   if (!projects[projectId]) return;
   
@@ -1432,12 +1448,18 @@ function createProjectCard(project, depth = 0) {
 
 function createTaskHTML(project, task) {
   const plannedClass = task.plannedForToday ? 'planned-today' : '';
+  
+  // Calculate subtask progress
+  const totalSubtasks = task.subtasks ? task.subtasks.length : 0;
+  const completedSubtasks = task.subtasks ? task.subtasks.filter(st => st.completed).length : 0;
+  const progressText = totalSubtasks > 0 ? `<span class="subtask-progress">(${completedSubtasks}/${totalSubtasks} subtasks)</span>` : '';
+  
   return `
     <div class="task-item drop-zone ${task.completed ? 'completed' : ''} ${plannedClass}" 
          data-task-id="${task.id}" data-project-id="${project.id}">
       <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
              onchange="toggleTask('${project.id}', '${task.id}')">
-      <span class="task-text">${escapeHtml(task.description)}</span>
+      <span class="task-text">${escapeHtml(task.description)} ${progressText}</span>
       <div class="task-actions">
         <button onclick="startPomodoroSession('${project.id}', '${task.id}')" title="Start Pomodoro (25 min)" class="pomodoro-btn">
           <i class="fas fa-tomato">🍅</i>
@@ -1446,7 +1468,7 @@ function createTaskHTML(project, task) {
           <i class="fas fa-edit"></i>
         </button>
         <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask" class="add-subtask-btn">
-          <i class="fas fa-plus"></i> Add Subtask
+          <i class="fas fa-plus"></i>
         </button>
         <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
           <i class="fas fa-trash"></i>
@@ -1456,8 +1478,9 @@ function createTaskHTML(project, task) {
     ${task.subtasks ? task.subtasks.map(subtask => `
       <div class="subtask-item drop-zone ${subtask.completed ? 'completed' : ''}" 
            data-subtask-id="${subtask.id}" data-task-id="${task.id}" data-project-id="${project.id}">
-        <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''}>
-        <span class="task-text">└ ${escapeHtml(subtask.description)}</span>
+        <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''} 
+               onchange="toggleSubtask('${project.id}', '${task.id}', '${subtask.id}')">
+        <span class="task-text">${escapeHtml(subtask.description)}</span>
         <div class="task-actions">
           <button onclick="editSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Edit subtask" class="edit-subtask-btn">
             <i class="fas fa-edit"></i>
@@ -1545,27 +1568,55 @@ function renderBoards() {
 }
 
 function createTaskElement(project, task) {
+  // Calculate subtask progress for board view
+  const totalSubtasks = task.subtasks ? task.subtasks.length : 0;
+  const completedSubtasks = task.subtasks ? task.subtasks.filter(st => st.completed).length : 0;
+  const progressText = totalSubtasks > 0 ? `<span class="subtask-progress">(${completedSubtasks}/${totalSubtasks} subtasks)</span>` : '';
+  
   const li = document.createElement('li');
   li.className = `task-item drop-zone ${task.completed ? 'completed' : ''}`;
   li.setAttribute('data-task-id', task.id);
   li.setAttribute('data-project-id', project.id);
   
-  li.innerHTML = `
-    <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
-           onchange="toggleTask('${project.id}', '${task.id}')">
-    <span class="task-text">${escapeHtml(task.description)}</span>
-    <span class="task-project">${escapeHtml(project.name)}</span>
-    <div class="task-actions">
-      <button onclick="editTask('${project.id}', '${task.id}')" title="Edit task">
-        <i class="fas fa-edit"></i>
-      </button>
-      <button onclick="moveProject('${project.id}')" title="Move project">
-        <i class="fas fa-exchange-alt"></i>
-      </button>
-      <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
-        <i class="fas fa-trash"></i>
-      </button>
+  const subtasksHtml = task.subtasks ? task.subtasks.map(subtask => `
+    <div class="board-subtask-item ${subtask.completed ? 'completed' : ''}" 
+         data-subtask-id="${subtask.id}" data-task-id="${task.id}" data-project-id="${project.id}">
+      <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''} 
+             onchange="toggleSubtask('${project.id}', '${task.id}', '${subtask.id}')">
+      <span class="subtask-text">${escapeHtml(subtask.description)}</span>
+      <div class="subtask-actions">
+        <button onclick="editSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Edit subtask" class="edit-subtask-btn">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Delete subtask">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
     </div>
+  `).join('') : '';
+  
+  li.innerHTML = `
+    <div class="board-task-main">
+      <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
+             onchange="toggleTask('${project.id}', '${task.id}')">
+      <span class="task-text">${escapeHtml(task.description)} ${progressText}</span>
+      <span class="task-project">${escapeHtml(project.name)}</span>
+      <div class="task-actions">
+        <button onclick="editTask('${project.id}', '${task.id}')" title="Edit task">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask" class="add-subtask-btn">
+          <i class="fas fa-plus"></i>
+        </button>
+        <button onclick="moveProject('${project.id}')" title="Move project">
+          <i class="fas fa-exchange-alt"></i>
+        </button>
+        <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+    ${subtasksHtml}
   `;
   
   return li;
@@ -2003,24 +2054,51 @@ function renderFocusTasks(tasks, type) {
     return `<div class="empty-state"><i class="fas fa-check-circle"></i> All clear!</div>`;
   }
   
-  return tasks.map(task => `
-    <div class="focus-task ${type}">
-      <input type="checkbox" onchange="toggleTask('${task.projectId}', '${task.id}')" class="task-checkbox">
-      <div class="focus-task-content">
-        <div class="focus-task-title">${escapeHtml(task.description)}</div>
-        <div class="focus-task-meta">
-          <span class="project-tag">${escapeHtml(task.projectName)}</span>
-          ${task.dueDate ? `<span class="due-date"><i class="fas fa-calendar"></i> ${formatDate(task.dueDate)}</span>` : ''}
-          ${task.estimatedTime > 0 ? `<span class="time-estimate"><i class="fas fa-clock"></i> ${task.estimatedTime}h</span>` : ''}
+  return tasks.map(task => {
+    // Calculate subtask progress for focus view
+    const totalSubtasks = task.subtasks ? task.subtasks.length : 0;
+    const completedSubtasks = task.subtasks ? task.subtasks.filter(st => st.completed).length : 0;
+    const progressText = totalSubtasks > 0 ? ` (${completedSubtasks}/${totalSubtasks} subtasks)` : '';
+    
+    // Render subtasks for focus view
+    const subtasksHtml = task.subtasks && task.subtasks.length > 0 ? `
+      <div class="focus-subtasks">
+        ${task.subtasks.map(subtask => `
+          <div class="focus-subtask-item ${subtask.completed ? 'completed' : ''}">
+            <input type="checkbox" ${subtask.completed ? 'checked' : ''} 
+                   onchange="toggleSubtask('${task.projectId}', '${task.id}', '${subtask.id}')" class="task-checkbox">
+            <span class="focus-subtask-text">${escapeHtml(subtask.description)}</span>
+            <button onclick="editSubtask('${task.projectId}', '${task.id}', '${subtask.id}')" title="Edit subtask" class="focus-edit-subtask-btn">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+    
+    return `
+      <div class="focus-task ${type}">
+        <input type="checkbox" onchange="toggleTask('${task.projectId}', '${task.id}')" class="task-checkbox">
+        <div class="focus-task-content">
+          <div class="focus-task-title">${escapeHtml(task.description)}${progressText}</div>
+          <div class="focus-task-meta">
+            <span class="project-tag">${escapeHtml(task.projectName)}</span>
+            ${task.dueDate ? `<span class="due-date"><i class="fas fa-calendar"></i> ${formatDate(task.dueDate)}</span>` : ''}
+            ${task.estimatedTime > 0 ? `<span class="time-estimate"><i class="fas fa-clock"></i> ${task.estimatedTime}h</span>` : ''}
+          </div>
+          ${subtasksHtml}
+        </div>
+        <div class="focus-task-actions">
+          <button onclick="addSubtask('${task.projectId}', '${task.id}')" title="Add subtask" class="add-subtask-btn">
+            <i class="fas fa-plus"></i>
+          </button>
+          <button onclick="startTimer('${task.projectId}', '${task.id}', this)" class="timer-btn" title="Start timer">
+            <i class="fas fa-play"></i>
+          </button>
         </div>
       </div>
-      <div class="focus-task-actions">
-        <button onclick="startTimer('${task.projectId}', '${task.id}', this)" class="timer-btn" title="Start timer">
-          <i class="fas fa-play"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // Statistics Functions
