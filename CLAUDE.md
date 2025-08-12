@@ -1,14 +1,19 @@
 # Productivity Dashboard - Claude Context
 
 ## Overview
-A comprehensive web-based productivity dashboard with project management, task tracking, focus sessions, Pomodoro timers, and analytics. Built with vanilla HTML, CSS, and JavaScript.
+A comprehensive **native desktop application** (Electron-based) with project management, task tracking, focus sessions, Pomodoro timers, and analytics. Built with vanilla HTML, CSS, and JavaScript, packaged as a native macOS app.
+
+**IMPORTANT**: This is a desktop Electron app, not a web application. The HTML/CSS/JS files are source code that gets packaged into a native macOS application for distribution.
 
 ## Architecture
 
 ### File Structure
-- `index.html` - Main application interface
-- `script.js` - Core application logic (~3200 lines)
-- `style.css` - Complete styling and responsive design
+- `main.js` - Electron main process (app entry point)
+- `index.html` - Main application interface (packaged into app)
+- `script.js` - Core application logic (~3200 lines, packaged into app)
+- `style.css` - Complete styling and responsive design (packaged into app)
+- `package.json` - Dependencies and build configuration for Electron
+- `dist/` - Built Electron app packages (.dmg files for distribution)
 - `.github/copilot-instructions.md` - Development patterns and conventions
 
 ### Key Data Structures
@@ -224,5 +229,38 @@ To test the pause/resume functionality:
 - Persisted in `focusSession.customDuration` property
 - UI located in focus mode settings panel
 ```
+
+## Recent Improvements (2025-08-12)
+
+### UI/UX Consistency Enhancements
+**Location**: `script.js:275-308, 1382, 1396`, `style.css:284-308`, `index.html:90-104`
+
+1. **Professional Button Styling for Subtasks**: 
+   - Added `.add-subtask-btn` and `.edit-subtask-btn` CSS classes
+   - Green theme for add actions, blue theme for edit actions
+   - Consistent hover effects and visual polish
+   - Applied to both task and subtask action buttons
+
+2. **Streamlined Board View**:
+   - Removed `#add-exec` and `#add-incub` buttons from board view HTML
+   - Removed corresponding JavaScript event handlers
+   - Board view now focuses purely on task management
+
+3. **Enhanced Task Modal System**:
+   - Updated `openTaskModal()` to support both add and edit modes
+   - Modified `handleTaskSubmit()` to handle creation and updates
+   - Replaced simple prompts with professional modal interfaces
+   - Fixed unwanted focus mode redirects
+
+4. **Improved Subtask Management**:
+   - Enhanced `showCustomPrompt()` to support default values
+   - Updated `addSubtask()` and `editSubtask()` to use improved prompts
+   - Consistent error handling and user experience
+
+### Key Technical Changes
+- **CSS Classes**: Added professional styling classes for consistency
+- **Modal System**: Unified all task operations under professional modal interface  
+- **Event Handling**: Streamlined button event delegation
+- **Focus Mode**: Fixed redirect issues when adding/editing tasks
 
 This living document approach ensures future Claude instances have accurate, up-to-date context about the codebase and can work more effectively without having to rediscover patterns and structures.

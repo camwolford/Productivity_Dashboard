@@ -184,7 +184,7 @@ function updateDashboardTitleDisplay() {
 }
 
 // Custom Prompt for Electron compatibility
-function showCustomPrompt(message, callback) {
+function showCustomPrompt(message, callback, defaultValue = '') {
   // Create prompt modal elements
   const promptModal = document.createElement('div');
   promptModal.className = 'modal active';
@@ -194,7 +194,7 @@ function showCustomPrompt(message, callback) {
     <div class="modal-content">
       <h2>Input Required</h2>
       <p>${message}</p>
-      <input type="text" id="custom-prompt-input" placeholder="Enter text..." />
+      <input type="text" id="custom-prompt-input" placeholder="Enter text..." value="${defaultValue}" />
       <div class="modal-actions">
         <button type="button" id="custom-prompt-cancel" class="cancel-btn">Cancel</button>
         <button type="button" id="custom-prompt-ok" class="primary-btn">OK</button>
@@ -208,8 +208,13 @@ function showCustomPrompt(message, callback) {
   const okBtn = document.getElementById('custom-prompt-ok');
   const cancelBtn = document.getElementById('custom-prompt-cancel');
   
-  // Focus on input
-  setTimeout(() => input.focus(), 100);
+  // Focus on input and select all text if there's a default value
+  setTimeout(() => {
+    input.focus();
+    if (defaultValue) {
+      input.select();
+    }
+  }, 100);
   
   // Handle OK button
   okBtn.addEventListener('click', () => {
@@ -326,39 +331,37 @@ function setupEventListeners() {
   cancelBtn.addEventListener('click', closeProjectModal);
   projectForm.addEventListener('submit', handleProjectSubmit);
   
+  // Task Modal Event Listeners
+  const taskModal = document.getElementById('task-modal');
+  const taskForm = document.getElementById('task-form');
+  const closeTaskModalBtn = document.getElementById('close-task-modal');
+  const cancelTaskBtn = document.getElementById('cancel-task-btn');
+  
+  if (closeTaskModalBtn) closeTaskModalBtn.addEventListener('click', closeTaskModal);
+  if (cancelTaskBtn) cancelTaskBtn.addEventListener('click', closeTaskModal);
+  if (taskForm) taskForm.addEventListener('submit', handleTaskSubmit);
+  
   // Close modals when clicking outside
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeProjectModal();
   });
   
+  if (taskModal) {
+    taskModal.addEventListener('click', (e) => {
+      if (e.target === taskModal) closeTaskModal();
+    });
+  }
+  
   statsModal.addEventListener('click', (e) => {
     if (e.target === statsModal) closeStatsModal();
   });
 
-  // Legacy board buttons - use event delegation for Electron compatibility
+  // Event delegation for project buttons
   document.addEventListener('click', (e) => {
-    // Check if clicked element or its parent is the add-exec button
-    const execButton = e.target.closest('#add-exec');
-    if (execButton) {
-      e.preventDefault();
-      e.stopPropagation();
-      addBoardTask('Execution');
-      return;
-    }
-    
-    // Check if clicked element or its parent is the add-incub button  
-    const incubButton = e.target.closest('#add-incub');
-    if (incubButton) {
-      e.preventDefault();
-      e.stopPropagation();
-      addBoardTask('Incubation');
-      return;
-    }
-    
     // Handle project add task buttons
-    const secondaryButton = e.target.closest('.secondary-btn');
-    if (secondaryButton) {
-      const onclick = secondaryButton.getAttribute('onclick');
+    const addTaskButton = e.target.closest('.add-task-project-btn');
+    if (addTaskButton) {
+      const onclick = addTaskButton.getAttribute('onclick');
       if (onclick && onclick.includes('addTaskToProject')) {
         e.preventDefault();
         e.stopPropagation();
@@ -737,6 +740,111 @@ function handleProjectSubmit(e) {
   closeProjectModal();
 }
 
+// Task Modal Functions
+function openTaskModal(projectId, taskId = null) {
+  const taskModal = document.getElementById('task-modal');
+  const taskForm = document.getElementById('task-form');
+  
+  // Store the project ID and task ID in the form data
+  taskForm.dataset.projectId = projectId;
+  if (taskId) {
+    taskForm.dataset.taskId = taskId;
+  } else {
+    delete taskForm.dataset.taskId;
+  }
+  
+  const project = projects[projectId];
+  const modalTitle = document.getElementById('task-modal-title');
+  
+  if (taskId) {
+    // Edit mode
+    const task = project.tasks.find(t => t.id === taskId);
+    if (task) {
+      modalTitle.textContent = `Edit Task`;
+      document.getElementById('task-description').value = task.description;
+      document.getElementById('task-due-date').value = task.dueDate || '';
+      document.getElementById('task-priority').value = task.priority || 'medium';
+      document.getElementById('task-estimated-time').value = task.estimatedTime || 0;
+      
+      // Change button text
+      document.getElementById('save-task-btn').textContent = 'Update Task';
+    }
+  } else {
+    // Add mode
+    modalTitle.textContent = `Add Task to ${project.name}`;
+    document.getElementById('save-task-btn').textContent = 'Save Task';
+  }
+  
+  taskModal.classList.add('active');
+  
+  // Focus on first input
+  setTimeout(() => {
+    document.getElementById('task-description').focus();
+  }, 100);
+}
+
+function closeTaskModal() {
+  const taskModal = document.getElementById('task-modal');
+  const taskForm = document.getElementById('task-form');
+  
+  taskModal.classList.remove('active');
+  taskForm.reset();
+  delete taskForm.dataset.projectId;
+}
+
+function handleTaskSubmit(e) {
+  e.preventDefault();
+  
+  const taskForm = document.getElementById('task-form');
+  const projectId = taskForm.dataset.projectId;
+  const taskId = taskForm.dataset.taskId;
+  
+  if (!projectId || !projects[projectId]) return;
+  
+  const taskData = {
+    description: document.getElementById('task-description').value.trim(),
+    dueDate: document.getElementById('task-due-date').value || null,
+    priority: document.getElementById('task-priority').value,
+    estimatedTime: parseFloat(document.getElementById('task-estimated-time').value) || 0
+  };
+  
+  if (!taskData.description) return;
+  
+  const project = projects[projectId];
+  
+  if (taskId) {
+    // Edit mode - update existing task
+    const task = project.tasks.find(t => t.id === taskId);
+    if (task) {
+      task.description = taskData.description;
+      task.dueDate = taskData.dueDate;
+      task.priority = taskData.priority;
+      task.estimatedTime = taskData.estimatedTime;
+      project.updatedAt = new Date().toISOString();
+    }
+  } else {
+    // Add mode - create new task
+    const newTaskId = `task_${nextId++}`;
+    const newTask = {
+      id: newTaskId,
+      description: taskData.description,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      dueDate: taskData.dueDate,
+      priority: taskData.priority,
+      estimatedTime: taskData.estimatedTime,
+      actualTime: 0,
+      subtasks: []
+    };
+    
+    project.tasks.push(newTask);
+  }
+  
+  saveState();
+  updateDisplay();
+  closeTaskModal();
+}
+
 function deleteProject(projectId) {
   const project = projects[projectId];
   if (!project) return;
@@ -793,29 +901,9 @@ function moveProject(projectId) {
 
 // Task Management
 function addTaskToProject(projectId) {
-  showCustomPrompt('Enter task description:', (description) => {
-    if (!description) return;
-    
-    const project = projects[projectId];
-    if (project) {
-      const taskId = `task_${nextId++}`;
-      const newTask = {
-        id: taskId,
-        description: description.trim(),
-        completed: false,
-        createdAt: new Date().toISOString(),
-        dueDate: null,
-        estimatedTime: 0,
-        actualTime: 0,
-        subtasks: []
-      };
-      
-      project.tasks.push(newTask);
-      project.updatedAt = new Date().toISOString();
-      saveState();
-      updateDisplay();
-    }
-  });
+  if (!projects[projectId]) return;
+  
+  openTaskModal(projectId);
 }
 
 function toggleTask(projectId, taskId) {
@@ -844,33 +932,9 @@ function toggleTask(projectId, taskId) {
 }
 
 function editTask(projectId, taskId) {
-  const project = projects[projectId];
-  if (project) {
-    const task = project.tasks.find(t => t.id === taskId);
-    if (task) {
-      const newDescription = prompt('Edit task description:', task.description);
-      if (newDescription && newDescription.trim() !== task.description) {
-        task.description = newDescription.trim();
-        project.updatedAt = new Date().toISOString();
-        saveState();
-        updateDisplay();
-        
-        // Auto-return to focus mode after editing task
-        if (returnToFocusMode && currentView !== 'focus') {
-          returnToFocusMode = false;
-          currentView = 'focus';
-          // Resume focus session instead of starting new one
-          if (focusSession.isPaused) {
-            resumeFocusSession();
-          } else {
-            startFocusSession();
-          }
-          updateDisplay();
-          updateViewButtons();
-        }
-      }
-    }
-  }
+  if (!projects[projectId]) return;
+  
+  openTaskModal(projectId, taskId);
 }
 
 function deleteTask(projectId, taskId) {
@@ -890,26 +954,27 @@ function deleteTask(projectId, taskId) {
 }
 
 function addSubtask(projectId, taskId) {
-  const description = prompt('Enter subtask description:');
-  if (!description) return;
-  
-  const project = projects[projectId];
-  if (project) {
-    const task = project.tasks.find(t => t.id === taskId);
-    if (task) {
-      const subtaskId = `subtask_${nextId++}`;
-      task.subtasks.push({
-        id: subtaskId,
-        description: description.trim(),
-        completed: false,
-        estimatedTime: 0,
-        actualTime: 0
-      });
-      project.updatedAt = new Date().toISOString();
-      saveState();
-      updateDisplay();
+  showCustomPrompt('Enter subtask description:', (description) => {
+    if (!description || !description.trim()) return;
+    
+    const project = projects[projectId];
+    if (project) {
+      const task = project.tasks.find(t => t.id === taskId);
+      if (task) {
+        const subtaskId = `subtask_${nextId++}`;
+        task.subtasks.push({
+          id: subtaskId,
+          description: description.trim(),
+          completed: false,
+          estimatedTime: 0,
+          actualTime: 0
+        });
+        project.updatedAt = new Date().toISOString();
+        saveState();
+        updateDisplay();
+      }
     }
-  }
+  });
 }
 
 function editSubtask(projectId, taskId, subtaskId) {
@@ -919,27 +984,14 @@ function editSubtask(projectId, taskId, subtaskId) {
     if (task) {
       const subtask = task.subtasks.find(st => st.id === subtaskId);
       if (subtask) {
-        const newDescription = prompt('Edit subtask description:', subtask.description);
-        if (newDescription && newDescription.trim() !== subtask.description) {
-          subtask.description = newDescription.trim();
-          project.updatedAt = new Date().toISOString();
-          saveState();
-          updateDisplay();
-          
-          // Auto-return to focus mode after editing subtask
-          if (returnToFocusMode && currentView !== 'focus') {
-            returnToFocusMode = false;
-            currentView = 'focus';
-            // Resume focus session instead of starting new one
-            if (focusSession.isPaused) {
-              resumeFocusSession();
-            } else {
-              startFocusSession();
-            }
+        showCustomPrompt('Edit subtask description:', (newDescription) => {
+          if (newDescription && newDescription.trim() && newDescription.trim() !== subtask.description) {
+            subtask.description = newDescription.trim();
+            project.updatedAt = new Date().toISOString();
+            saveState();
             updateDisplay();
-            updateViewButtons();
           }
-        }
+        }, subtask.description);
       }
     }
   }
@@ -1288,7 +1340,7 @@ function createProjectCard(project, depth = 0) {
       <button class="move-btn" onclick="moveProject('${project.id}')">
         <i class="fas fa-exchange-alt"></i> Move to ${project.status === 'execution' ? 'Incubation' : 'Execution'}
       </button>
-      <button class="secondary-btn" onclick="addTaskToProject('${project.id}')">
+      <button class="add-task-project-btn" onclick="addTaskToProject('${project.id}')">
         <i class="fas fa-plus"></i> Add Task
       </button>
       ${totalTasks > 0 && completedTasks === totalTasks ? `
@@ -1327,7 +1379,7 @@ function createTaskHTML(project, task) {
         <button onclick="editTask('${project.id}', '${task.id}')" title="Edit task">
           <i class="fas fa-edit"></i>
         </button>
-        <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask">
+        <button onclick="addSubtask('${project.id}', '${task.id}')" title="Add subtask" class="add-subtask-btn">
           <i class="fas fa-plus"></i>
         </button>
         <button onclick="deleteTask('${project.id}', '${task.id}')" title="Delete task">
@@ -1341,7 +1393,7 @@ function createTaskHTML(project, task) {
         <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''}>
         <span class="task-text">└ ${escapeHtml(subtask.description)}</span>
         <div class="task-actions">
-          <button onclick="editSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Edit subtask">
+          <button onclick="editSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Edit subtask" class="edit-subtask-btn">
             <i class="fas fa-edit"></i>
           </button>
           <button onclick="deleteSubtask('${project.id}', '${task.id}', '${subtask.id}')" title="Delete subtask">

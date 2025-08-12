@@ -2,7 +2,9 @@
 
 ## 🎯 A Comprehensive Productivity Management System
 
-Native macOS desktop application for researchers and professionals who need to balance execution-focused work with incubation of future ideas. Built with Electron for perfect focus timer reliability.
+**Primary Product**: Native macOS desktop application for researchers and professionals who need to balance execution-focused work with incubation of future ideas. Built with Electron for perfect focus timer reliability.
+
+> **Production Note**: This is a desktop Electron app, not a web application. The HTML/CSS/JS files are packaged into a native macOS app for distribution.
 
 ## ✨ Key Features
 
@@ -114,3 +116,16 @@ This productivity dashboard now operates as a **true native desktop application*
 - ✅ Zero internet dependency
 
 **Focus sessions now continue perfectly while you work in other apps!** 🚀
+
+## 📝 Recent Improvements (Latest)
+
+### **Enhanced UI/UX Consistency**
+- ✅ **Professional Button Styling**: Add task and subtask buttons now match the polished design of edit buttons
+- ✅ **Streamlined Board View**: Removed add task buttons from board view for cleaner interface
+- ✅ **Improved Task Modals**: Task editing now uses professional modal interface instead of simple prompts
+- ✅ **Consistent Color Theming**: Green for add actions, blue for edit actions throughout the app
+
+### **Better Task Management**
+- ✅ **Enhanced Subtask Experience**: Add and edit subtask buttons now have professional styling
+- ✅ **No Unwanted Redirects**: Fixed issue where adding tasks would redirect to focus view
+- ✅ **Seamless Modal Experience**: All task operations use consistent, professional modal interfaces

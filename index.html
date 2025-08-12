@@ -87,9 +87,6 @@
           </div>
           <div class="board-content">
             <ul id="execution-list" class="task-list"></ul>
-            <button id="add-exec" class="add-task-btn">
-              <i class="fas fa-plus"></i> Add Task
-            </button>
           </div>
         </section>
         <section id="incubation" class="board">
@@ -99,9 +96,6 @@
           </div>
           <div class="board-content">
             <ul id="incubation-list" class="task-list"></ul>
-            <button id="add-incub" class="add-task-btn">
-              <i class="fas fa-plus"></i> Add Task
-            </button>
           </div>
         </section>
       </div>
@@ -479,6 +473,46 @@
       <div class="modal-footer">
         <button type="button" class="secondary-btn" id="cancel-btn">Cancel</button>
         <button type="submit" form="project-form" class="primary-btn" id="save-btn">Save Project</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Modal -->
+  <div id="task-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="task-modal-title">Add New Task</h3>
+        <button class="close-btn" id="close-task-modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="task-form">
+          <div class="form-group">
+            <label for="task-description">Task Description</label>
+            <input type="text" id="task-description" placeholder="Enter task description..." required>
+          </div>
+          <div class="form-group">
+            <label for="task-due-date">Due Date (Optional)</label>
+            <input type="date" id="task-due-date">
+          </div>
+          <div class="form-group">
+            <label for="task-priority">Priority</label>
+            <select id="task-priority">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="task-estimated-time">Estimated Time (hours)</label>
+            <input type="number" id="task-estimated-time" step="0.5" min="0" placeholder="0">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="secondary-btn" id="cancel-task-btn">Cancel</button>
+        <button type="submit" form="task-form" class="primary-btn" id="save-task-btn">Save Task</button>
       </div>
     </div>
   </div>
