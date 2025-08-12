@@ -183,6 +183,68 @@ function updateDashboardTitleDisplay() {
   }
 }
 
+// Custom Prompt for Electron compatibility
+function showCustomPrompt(message, callback) {
+  // Create prompt modal elements
+  const promptModal = document.createElement('div');
+  promptModal.className = 'modal active';
+  promptModal.id = 'custom-prompt-modal';
+  
+  promptModal.innerHTML = `
+    <div class="modal-content">
+      <h2>Input Required</h2>
+      <p>${message}</p>
+      <input type="text" id="custom-prompt-input" placeholder="Enter text..." />
+      <div class="modal-actions">
+        <button type="button" id="custom-prompt-cancel" class="cancel-btn">Cancel</button>
+        <button type="button" id="custom-prompt-ok" class="primary-btn">OK</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(promptModal);
+  
+  const input = document.getElementById('custom-prompt-input');
+  const okBtn = document.getElementById('custom-prompt-ok');
+  const cancelBtn = document.getElementById('custom-prompt-cancel');
+  
+  // Focus on input
+  setTimeout(() => input.focus(), 100);
+  
+  // Handle OK button
+  okBtn.addEventListener('click', () => {
+    const value = input.value.trim();
+    document.body.removeChild(promptModal);
+    callback(value);
+  });
+  
+  // Handle Cancel button
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(promptModal);
+    callback(null);
+  });
+  
+  // Handle Enter key
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const value = input.value.trim();
+      document.body.removeChild(promptModal);
+      callback(value);
+    } else if (e.key === 'Escape') {
+      document.body.removeChild(promptModal);
+      callback(null);
+    }
+  });
+  
+  // Handle clicking outside modal
+  promptModal.addEventListener('click', (e) => {
+    if (e.target === promptModal) {
+      document.body.removeChild(promptModal);
+      callback(null);
+    }
+  });
+}
+
 // Help System
 function showHelpModal() {
   const helpModal = document.getElementById('help-modal');
@@ -273,9 +335,40 @@ function setupEventListeners() {
     if (e.target === statsModal) closeStatsModal();
   });
 
-  // Legacy board buttons
-  document.getElementById('add-exec')?.addEventListener('click', () => addLegacyTask('Execution'));
-  document.getElementById('add-incub')?.addEventListener('click', () => addLegacyTask('Incubation'));
+  // Legacy board buttons - use event delegation for Electron compatibility
+  document.addEventListener('click', (e) => {
+    // Check if clicked element or its parent is the add-exec button
+    const execButton = e.target.closest('#add-exec');
+    if (execButton) {
+      e.preventDefault();
+      e.stopPropagation();
+      addLegacyTask('Execution');
+      return;
+    }
+    
+    // Check if clicked element or its parent is the add-incub button  
+    const incubButton = e.target.closest('#add-incub');
+    if (incubButton) {
+      e.preventDefault();
+      e.stopPropagation();
+      addLegacyTask('Incubation');
+      return;
+    }
+    
+    // Handle project add task buttons
+    const secondaryButton = e.target.closest('.secondary-btn');
+    if (secondaryButton) {
+      const onclick = secondaryButton.getAttribute('onclick');
+      if (onclick && onclick.includes('addTaskToProject')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const projectId = onclick.match(/addTaskToProject\('([^']+)'\)/)?.[1];
+        if (projectId) {
+          addTaskToProject(projectId);
+        }
+      }
+    }
+  });
   
   // Focus mode controls
   document.getElementById('pause-focus')?.addEventListener('click', toggleFocusPause);
@@ -700,28 +793,29 @@ function moveProject(projectId) {
 
 // Task Management
 function addTaskToProject(projectId) {
-  const description = prompt('Enter task description:');
-  if (!description) return;
-  
-  const project = projects[projectId];
-  if (project) {
-    const taskId = `task_${nextId++}`;
-    const newTask = {
-      id: taskId,
-      description: description.trim(),
-      completed: false,
-      createdAt: new Date().toISOString(),
-      dueDate: null,
-      estimatedTime: 0,
-      actualTime: 0,
-      subtasks: []
-    };
+  showCustomPrompt('Enter task description:', (description) => {
+    if (!description) return;
     
-    project.tasks.push(newTask);
-    project.updatedAt = new Date().toISOString();
-    saveState();
-    updateDisplay();
-  }
+    const project = projects[projectId];
+    if (project) {
+      const taskId = `task_${nextId++}`;
+      const newTask = {
+        id: taskId,
+        description: description.trim(),
+        completed: false,
+        createdAt: new Date().toISOString(),
+        dueDate: null,
+        estimatedTime: 0,
+        actualTime: 0,
+        subtasks: []
+      };
+      
+      project.tasks.push(newTask);
+      project.updatedAt = new Date().toISOString();
+      saveState();
+      updateDisplay();
+    }
+  });
 }
 
 function toggleTask(projectId, taskId) {
@@ -866,24 +960,25 @@ function deleteSubtask(projectId, taskId, subtaskId) {
 
 // Legacy task management for board view
 function addLegacyTask(board) {
-  const description = prompt('Enter task description:');
-  if (!description) return;
-  
-  const projectId = `legacy_${nextId++}`;
-  
-  projects[projectId] = {
-    id: projectId,
-    name: description.trim(),
-    description: '',
-    priority: 'medium',
-    status: board.toLowerCase(),
-    tasks: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  saveState();
-  updateDisplay();
+  showCustomPrompt('Enter task description:', (description) => {
+    if (!description) return;
+    
+    const projectId = `legacy_${nextId++}`;
+    
+    projects[projectId] = {
+      id: projectId,
+      name: description.trim(),
+      description: '',
+      priority: 'medium',
+      status: board.toLowerCase(),
+      tasks: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    saveState();
+    updateDisplay();
+  });
 }
 
 // Archive Management Functions
@@ -3855,7 +3950,7 @@ function restoreState(state) {
   
   saveData();
   renderProjects();
-  renderBoardView();
+  renderBoards();
   renderFocusView();
   renderArchiveView();
   renderGoals();
