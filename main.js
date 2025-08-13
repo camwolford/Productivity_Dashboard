@@ -312,6 +312,11 @@ ipcMain.handle('stop-pomodoro-timer', (event) => {
   return true;
 });
 
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall();
+  return true;
+});
+
 // Auto-updater will be configured after getting the token
 
 // Auto-updater events

@@ -2,6 +2,13 @@
 let isElectron = false;
 let ipcRenderer = null;
 
+// Elements for update notifications
+const updateModal = document.getElementById('update-modal');
+const updateMessage = document.getElementById('update-message');
+const updateProgressBar = document.getElementById('update-progress');
+const updateProgressText = document.getElementById('update-progress-text');
+const updateFooter = document.getElementById('update-footer');
+
 try {
   if (window.require) {
     const electron = window.require('electron');
@@ -41,6 +48,45 @@ if (isElectron && ipcRenderer) {
     currentView = 'board';
     updateDisplay();
     updateViewButtons();
+  });
+
+  // Auto-update events
+  ipcRenderer.on('update-available', () => {
+    if (updateModal) {
+      updateMessage.textContent = 'A new update is available. Downloading...';
+      if (updateProgressBar) updateProgressBar.style.width = '0%';
+      if (updateProgressText) updateProgressText.textContent = '0%';
+      if (updateFooter) updateFooter.style.display = 'none';
+      updateModal.classList.add('active');
+    } else {
+      alert('A new update is available. Downloading...');
+    }
+  });
+
+  ipcRenderer.on('download-progress', (event, progress) => {
+    if (updateProgressBar) {
+      const percent = Math.round(progress.percent);
+      updateProgressBar.style.width = `${percent}%`;
+      if (updateProgressText) updateProgressText.textContent = `${percent}%`;
+    }
+  });
+
+  ipcRenderer.on('update-downloaded', () => {
+    if (updateModal) {
+      updateMessage.textContent = 'Update ready. Restart to install?';
+      if (updateFooter) updateFooter.style.display = 'flex';
+    } else if (confirm('Update downloaded. Restart to install?')) {
+      ipcRenderer.invoke('install-update');
+    }
+  });
+
+  ipcRenderer.on('update-error', (event, message) => {
+    if (updateModal) {
+      updateMessage.textContent = `Update error: ${message}`;
+      if (updateFooter) updateFooter.style.display = 'none';
+    } else {
+      console.error('Update error:', message);
+    }
   });
 }
 
@@ -327,12 +373,31 @@ function setupEventListeners() {
   if (redoBtn) redoBtn.addEventListener('click', performRedo);
   addProjectBtn.addEventListener('click', () => openProjectModal());
   closeModal.addEventListener('click', closeProjectModal);
-  closeStats.addEventListener('click', closeStatsModal);
-  cancelBtn.addEventListener('click', closeProjectModal);
-  projectForm.addEventListener('submit', handleProjectSubmit);
-  
-  // Task Modal Event Listeners
-  const taskModal = document.getElementById('task-modal');
+    closeStats.addEventListener('click', closeStatsModal);
+    cancelBtn.addEventListener('click', closeProjectModal);
+    projectForm.addEventListener('submit', handleProjectSubmit);
+
+    // Update modal controls
+    const updateInstallBtn = document.getElementById('update-install-btn');
+    const updateCancelBtn = document.getElementById('update-cancel-btn');
+    const closeUpdateModalBtn = document.getElementById('close-update-modal');
+    if (updateInstallBtn) {
+      updateInstallBtn.addEventListener('click', () => {
+        if (isElectron && ipcRenderer) {
+          ipcRenderer.invoke('install-update');
+        }
+      });
+    }
+    [updateCancelBtn, closeUpdateModalBtn].forEach(btn => {
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (updateModal) updateModal.classList.remove('active');
+        });
+      }
+    });
+
+    // Task Modal Event Listeners
+    const taskModal = document.getElementById('task-modal');
   const taskForm = document.getElementById('task-form');
   const closeTaskModalBtn = document.getElementById('close-task-modal');
   const cancelTaskBtn = document.getElementById('cancel-task-btn');
