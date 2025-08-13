@@ -42,6 +42,14 @@ if (isElectron && ipcRenderer) {
     updateDisplay();
     updateViewButtons();
   });
+
+  ipcRenderer.on('updates-disabled', () => {
+    const notice = document.getElementById('update-notice');
+    if (notice) {
+      notice.textContent = 'Auto-updates are disabled. Provide a GitHub token for private builds. Public releases update automatically.';
+      notice.classList.remove('hidden');
+    }
+  });
 }
 
 // Native notification function

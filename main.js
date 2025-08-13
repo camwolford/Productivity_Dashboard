@@ -18,7 +18,7 @@ async function getGitHubToken() {
   return new Promise((resolve) => {
     exec('security find-generic-password -a "productivity-dashboard" -s "github-token" -w 2>/dev/null', (error, stdout) => {
       if (error) {
-        console.log('No GitHub token found in keychain or environment. Auto-updates will not work for private repository.');
+        console.log('No GitHub token found in keychain or environment. Auto-updates will only work for public releases.');
         resolve('');
       } else {
         console.log('Using GitHub token from keychain');
@@ -375,7 +375,15 @@ app.whenReady().then(async () => {
     });
     console.log('Auto-updater configured for private repository with token');
   } else {
-    console.log('No GitHub token available. Auto-updates disabled for private repository.');
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'camwolford',
+      repo: 'Productivity_Dashboard'
+    });
+    mainWindow.webContents.on('did-finish-load', () => {
+      mainWindow.webContents.send('updates-disabled');
+    });
+    console.log('No GitHub token available. Auto-updates limited to public releases.');
   }
   
   // Force update check in development for testing
