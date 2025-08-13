@@ -340,13 +340,13 @@ autoUpdater.on('update-not-available', () => {
 app.whenReady().then(async () => {
   createWindow();
   
-  // Configure auto-updater to use public distribution repository
+  // Configure auto-updater to use this public repository
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'camwolford',
-    repo: 'productivity-dashboard-public'
+    repo: 'Productivity_Dashboard'
   });
-  console.log('Auto-updater configured for public distribution repository');
+  console.log('Auto-updater configured for public repository');
   
   // Force update check in development for testing
   if (process.env.NODE_ENV === 'development') {
