@@ -9,7 +9,6 @@
     "build": "electron-builder",
     "build:mac": "electron-builder --mac",
     "dist": "npm run build",
-    "deploy": "node deploy.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -69,7 +68,7 @@
       {
         "provider": "github",
         "owner": "camwolford",
-        "repo": "productivity-dashboard-public"
+        "repo": "Productivity_Dashboard"
       }
     ]
   }
