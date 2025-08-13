@@ -290,7 +290,15 @@ ipcMain.handle('stop-pomodoro-timer', (event) => {
 });
 
 ipcMain.handle('install-update', () => {
-  autoUpdater.quitAndInstall();
+  console.log('Installing update and restarting...');
+  // Close all windows first
+  if (mainWindow) {
+    mainWindow.close();
+  }
+  // Give a moment for windows to close, then quit and install
+  setTimeout(() => {
+    autoUpdater.quitAndInstall();
+  }, 1000);
   return true;
 });
 
@@ -316,9 +324,14 @@ autoUpdater.on('download-progress', (progress) => {
 });
 
 autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded, ready to install:', info);
   if (mainWindow) {
     mainWindow.webContents.send('update-downloaded', info);
   }
+});
+
+autoUpdater.on('before-quit-for-update', () => {
+  console.log('About to quit for update installation...');
 });
 
 autoUpdater.on('error', (error) => {
