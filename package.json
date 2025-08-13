@@ -1,6 +1,6 @@
 {
   "name": "productivity-dashboard",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "description": "A sophisticated, project-based productivity management system designed for researchers and professionals who need to balance execution-focused work with incubation of future ideas.",
   "main": "main.js",
   "scripts": {
