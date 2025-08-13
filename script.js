@@ -58,8 +58,6 @@ if (isElectron && ipcRenderer) {
       if (updateProgressText) updateProgressText.textContent = '0%';
       if (updateFooter) updateFooter.style.display = 'none';
       updateModal.classList.add('active');
-    } else {
-      alert('A new update is available. Downloading...');
     }
   });
 
@@ -75,8 +73,6 @@ if (isElectron && ipcRenderer) {
     if (updateModal) {
       updateMessage.textContent = 'Update ready. Restart to install?';
       if (updateFooter) updateFooter.style.display = 'flex';
-    } else if (confirm('Update downloaded. Restart to install?')) {
-      ipcRenderer.invoke('install-update');
     }
   });
 
@@ -373,31 +369,31 @@ function setupEventListeners() {
   if (redoBtn) redoBtn.addEventListener('click', performRedo);
   addProjectBtn.addEventListener('click', () => openProjectModal());
   closeModal.addEventListener('click', closeProjectModal);
-    closeStats.addEventListener('click', closeStatsModal);
-    cancelBtn.addEventListener('click', closeProjectModal);
-    projectForm.addEventListener('submit', handleProjectSubmit);
+  closeStats.addEventListener('click', closeStatsModal);
+  cancelBtn.addEventListener('click', closeProjectModal);
+  projectForm.addEventListener('submit', handleProjectSubmit);
 
-    // Update modal controls
-    const updateInstallBtn = document.getElementById('update-install-btn');
-    const updateCancelBtn = document.getElementById('update-cancel-btn');
-    const closeUpdateModalBtn = document.getElementById('close-update-modal');
-    if (updateInstallBtn) {
-      updateInstallBtn.addEventListener('click', () => {
-        if (isElectron && ipcRenderer) {
-          ipcRenderer.invoke('install-update');
-        }
-      });
-    }
-    [updateCancelBtn, closeUpdateModalBtn].forEach(btn => {
-      if (btn) {
-        btn.addEventListener('click', () => {
-          if (updateModal) updateModal.classList.remove('active');
-        });
+  // Update modal controls
+  const updateInstallBtn = document.getElementById('update-install-btn');
+  const updateCancelBtn = document.getElementById('update-cancel-btn');
+  const closeUpdateModalBtn = document.getElementById('close-update-modal');
+  if (updateInstallBtn) {
+    updateInstallBtn.addEventListener('click', () => {
+      if (isElectron && ipcRenderer) {
+        ipcRenderer.invoke('install-update');
       }
     });
+  }
+  [updateCancelBtn, closeUpdateModalBtn].forEach(btn => {
+    if (btn) {
+      btn.addEventListener('click', () => {
+        if (updateModal) updateModal.classList.remove('active');
+      });
+    }
+  });
 
-    // Task Modal Event Listeners
-    const taskModal = document.getElementById('task-modal');
+  // Task Modal Event Listeners
+  const taskModal = document.getElementById('task-modal');
   const taskForm = document.getElementById('task-form');
   const closeTaskModalBtn = document.getElementById('close-task-modal');
   const cancelTaskBtn = document.getElementById('cancel-task-btn');
