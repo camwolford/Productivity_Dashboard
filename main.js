@@ -368,6 +368,10 @@ app.whenReady().then(async () => {
     console.log('No GitHub token available. Auto-updates disabled for private repository.');
   }
   
+  // Force update check in development for testing
+  if (process.env.NODE_ENV === 'development') {
+    autoUpdater.forceDevUpdateConfig = true;
+  }
   autoUpdater.checkForUpdatesAndNotify();
   createMenu();
 
