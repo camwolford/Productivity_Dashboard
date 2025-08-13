@@ -340,13 +340,21 @@ autoUpdater.on('error', (error) => {
   }
 });
 
-// Add debug logging for auto-updater
+// Add debug logging for auto-updater  
 autoUpdater.on('checking-for-update', () => {
   console.log('Checking for update...');
 });
 
 autoUpdater.on('update-not-available', () => {
   console.log('Update not available.');
+});
+
+autoUpdater.on('error', (error) => {
+  console.error('Auto-updater error details:', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name
+  });
 });
 
 // App event handlers
@@ -356,14 +364,16 @@ app.whenReady().then(async () => {
   // Configure auto-updater with GitHub token for private repo
   const token = await getGitHubToken();
   if (token) {
+    // Set token in environment for electron-updater
+    process.env.GH_TOKEN = token;
+    
     autoUpdater.setFeedURL({
       provider: 'github',
       owner: 'camwolford',
       repo: 'Productivity_Dashboard',
-      private: true,
-      token: token
+      private: true
     });
-    console.log('Auto-updater configured for private repository');
+    console.log('Auto-updater configured for private repository with token');
   } else {
     console.log('No GitHub token available. Auto-updates disabled for private repository.');
   }
