@@ -48,11 +48,57 @@
 3. Drag the app to your Applications folder
 4. Launch from Applications or Spotlight
 
-### **Updating**
-1. The app checks for updates automatically on launch
-2. If an update is found, it downloads in the background
-3. You'll receive a notification and can restart to apply the update
-4. Your existing projects and settings are preserved between versions
+### **Auto-Update System**
+
+The app includes a sophisticated auto-update system powered by `electron-updater` that keeps your productivity dashboard current with the latest features and fixes.
+
+#### **How Updates Work**
+1. **Automatic Check**: App checks for updates on every launch
+2. **Background Download**: Updates download silently without interrupting your work
+3. **User Notification**: You receive a native notification when an update is ready
+4. **One-Click Install**: Click "Restart and Update" to apply the new version
+5. **Data Preservation**: All projects, tasks, and settings are automatically preserved
+
+#### **Update Process Details**
+- **Update Server**: GitHub Releases serves as the update distribution system
+- **Delta Updates**: Only changed files are downloaded to minimize bandwidth usage
+- **Automatic Rollback**: If an update fails, the app automatically reverts to the previous version
+- **No Interruption**: Focus sessions and timers continue running during update checks
+
+#### **For Developers: Publishing Updates**
+To release a new version that triggers auto-updates:
+
+1. **Update Version**: Increment version in `package.json`
+2. **Build Release**: Run `npm run build-mac` to create DMG files
+3. **Create GitHub Release**:
+   ```bash
+   # Tag the release
+   git tag v1.1.0
+   git push origin v1.1.0
+   
+   # Create release on GitHub
+   gh release create v1.1.0 \
+     "dist/Productivity Dashboard-1.1.0.dmg" \
+     "dist/Productivity Dashboard-1.1.0-arm64.dmg" \
+     "dist/latest-mac.yml" \
+     --title "v1.1.0: New Features" \
+     --notes "Release notes here"
+   ```
+4. **Automatic Distribution**: Published releases are automatically detected by existing app installations
+
+#### **Update Configuration**
+The auto-updater is configured in `package.json`:
+```json
+"publish": [
+  {
+    "provider": "github",
+    "owner": "camwolford",
+    "repo": "Productivity_Dashboard"
+  }
+]
+```
+
+This ensures all users receive updates seamlessly while maintaining the native desktop app experience.
 
 ### **Development Setup**
 ```bash

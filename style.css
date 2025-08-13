@@ -414,6 +414,29 @@ body {
   position: relative;
 }
 
+.subtask-drag-handle {
+  cursor: grab;
+  color: #bdc3c7;
+  padding: 0.2rem;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  opacity: 0;
+  font-size: 0.8rem;
+}
+
+.subtask-item:hover .subtask-drag-handle {
+  opacity: 1;
+}
+
+.subtask-drag-handle:hover {
+  color: #95a5a6;
+  background: rgba(149, 165, 166, 0.1);
+}
+
+.subtask-item:active .subtask-drag-handle {
+  cursor: grabbing;
+}
+
 .subtask-item::before {
   content: "└";
   position: absolute;

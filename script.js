@@ -1478,9 +1478,13 @@ function createTaskHTML(project, task) {
       </div>
       ${task.subtasks && task.subtasks.length > 0 ? `
         <div class="subtask-list">
-          ${task.subtasks.map(subtask => `
+          ${task.subtasks.map((subtask, index) => `
             <div class="subtask-item drop-zone ${subtask.completed ? 'completed' : ''}" 
-                 data-subtask-id="${subtask.id}" data-task-id="${task.id}" data-project-id="${project.id}">
+                 data-subtask-id="${subtask.id}" data-task-id="${task.id}" data-project-id="${project.id}"
+                 data-subtask-index="${index}" draggable="true">
+              <div class="subtask-drag-handle" title="Drag to reorder">
+                <i class="fas fa-grip-vertical"></i>
+              </div>
               <input type="checkbox" class="task-checkbox" ${subtask.completed ? 'checked' : ''} 
                      onchange="toggleSubtask('${project.id}', '${task.id}', '${subtask.id}')">
               <span class="task-text">${escapeHtml(subtask.description)}</span>
@@ -3595,6 +3599,142 @@ function calculateInsights() {
     focusEfficiency: `${focusEfficiency.toFixed(1)} tasks/session`,
     weeklyTrend: trendDirection
   };
+}
+
+// Enhanced Weekly/Monthly Task Tracking
+function getWeeklyTaskStats(startDate = null) {
+  const end = startDate ? new Date(startDate) : new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 6); // 7 days including today
+  
+  let totalTasks = 0;
+  let totalTime = 0;
+  let totalFocusSessions = 0;
+  const dailyBreakdown = [];
+  
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    const dayData = analyticsData.dailyProductivity[dateStr];
+    
+    const dayStats = {
+      date: dateStr,
+      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      tasks: dayData ? dayData.tasksCompleted : 0,
+      time: dayData ? dayData.timeLogged : 0,
+      focusSessions: dayData ? dayData.focusSessions : 0
+    };
+    
+    totalTasks += dayStats.tasks;
+    totalTime += dayStats.time;
+    totalFocusSessions += dayStats.focusSessions;
+    dailyBreakdown.push(dayStats);
+  }
+  
+  return {
+    period: `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`,
+    totalTasks,
+    totalTime: Math.round(totalTime * 100) / 100,
+    totalFocusSessions,
+    averageTasksPerDay: (totalTasks / 7).toFixed(1),
+    averageTimePerDay: (totalTime / 7).toFixed(1),
+    dailyBreakdown
+  };
+}
+
+function getMonthlyTaskStats(year = null, month = null) {
+  const now = new Date();
+  const targetYear = year || now.getFullYear();
+  const targetMonth = month !== null ? month : now.getMonth();
+  
+  const start = new Date(targetYear, targetMonth, 1);
+  const end = new Date(targetYear, targetMonth + 1, 0); // Last day of month
+  
+  let totalTasks = 0;
+  let totalTime = 0;
+  let totalFocusSessions = 0;
+  const weeklyBreakdown = [];
+  let currentWeek = [];
+  let weekStarted = false;
+  
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    const dayData = analyticsData.dailyProductivity[dateStr];
+    
+    const dayStats = {
+      date: dateStr,
+      day: d.getDate(),
+      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      tasks: dayData ? dayData.tasksCompleted : 0,
+      time: dayData ? dayData.timeLogged : 0,
+      focusSessions: dayData ? dayData.focusSessions : 0
+    };
+    
+    totalTasks += dayStats.tasks;
+    totalTime += dayStats.time;
+    totalFocusSessions += dayStats.focusSessions;
+    
+    // Group by weeks (Sunday to Saturday)
+    if (d.getDay() === 0 && !weekStarted) { // Sunday - start new week
+      weekStarted = true;
+    }
+    
+    if (weekStarted) {
+      currentWeek.push(dayStats);
+      
+      if (d.getDay() === 6 || d.getTime() === end.getTime()) { // Saturday or last day
+        const weekTasks = currentWeek.reduce((sum, day) => sum + day.tasks, 0);
+        const weekTime = currentWeek.reduce((sum, day) => sum + day.time, 0);
+        
+        weeklyBreakdown.push({
+          weekNumber: weeklyBreakdown.length + 1,
+          dateRange: `${currentWeek[0].date} - ${currentWeek[currentWeek.length - 1].date}`,
+          totalTasks: weekTasks,
+          totalTime: Math.round(weekTime * 100) / 100,
+          days: [...currentWeek]
+        });
+        currentWeek = [];
+      }
+    }
+  }
+  
+  const daysInMonth = end.getDate();
+  
+  return {
+    period: `${start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+    totalTasks,
+    totalTime: Math.round(totalTime * 100) / 100,
+    totalFocusSessions,
+    averageTasksPerDay: (totalTasks / daysInMonth).toFixed(1),
+    averageTimePerDay: (totalTime / daysInMonth).toFixed(1),
+    weeklyBreakdown,
+    daysInMonth
+  };
+}
+
+// Export functions for task tracking data
+function exportWeeklyData(weeks = 4) {
+  const data = [];
+  const today = new Date();
+  
+  for (let i = 0; i < weeks; i++) {
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - (i * 7) - today.getDay()); // Go to Sunday of that week
+    data.push(getWeeklyTaskStats(new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000))); // End on Saturday
+  }
+  
+  return data.reverse(); // Oldest first
+}
+
+function exportMonthlyData(months = 6) {
+  const data = [];
+  const today = new Date();
+  
+  for (let i = 0; i < months; i++) {
+    const targetDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    data.push(getMonthlyTaskStats(targetDate.getFullYear(), targetDate.getMonth()));
+  }
+  
+  return data.reverse(); // Oldest first
 }
 
 // Goal Tracker Functions

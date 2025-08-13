@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(open index.html)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm ls:*)"
     ],
     "deny": []
   }
