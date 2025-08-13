@@ -24,11 +24,7 @@ try {
 // Set up Electron IPC listeners if in Electron environment
 if (isElectron && ipcRenderer) {
   // Listen for focus timer updates from main process
-  
-  
-  
-  
-  'focus-timer-update', (event, currentTime) => {
+  ipcRenderer.on('focus-timer-update', (event, currentTime) => {
     focusSession.currentTime = currentTime;
     updateFocusTimer();
   });
@@ -87,6 +83,7 @@ if (isElectron && ipcRenderer) {
     } else {
       console.error('Update error:', message);
     }
+  });
 }
 
 // Native notification function
