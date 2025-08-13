@@ -312,6 +312,11 @@ ipcMain.handle('stop-pomodoro-timer', (event) => {
   return true;
 });
 
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall();
+  return true;
+});
+
 // Auto-updater will be configured after getting the token
 
 // Auto-updater events
@@ -335,26 +340,23 @@ autoUpdater.on('update-downloaded', (info) => {
 
 autoUpdater.on('error', (error) => {
   console.error('Auto-updater error:', error);
+  console.error('Auto-updater error details:', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name
+  });
   if (mainWindow) {
     mainWindow.webContents.send('update-error', error ? error.message : 'unknown');
   }
 });
 
-// Add debug logging for auto-updater  
+// Add debug logging for auto-updater
 autoUpdater.on('checking-for-update', () => {
   console.log('Checking for update...');
 });
 
 autoUpdater.on('update-not-available', () => {
   console.log('Update not available.');
-});
-
-autoUpdater.on('error', (error) => {
-  console.error('Auto-updater error details:', {
-    message: error.message,
-    stack: error.stack,
-    name: error.name
-  });
 });
 
 // App event handlers
