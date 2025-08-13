@@ -42,7 +42,7 @@
       "index.html",
       "script.js",
       "style.css",
-      "app_icon.png",
+      "app_icon.jpg",
       "assets/**/*",
       "node_modules/**/*"
     ],

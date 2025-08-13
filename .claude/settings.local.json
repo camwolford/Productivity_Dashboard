@@ -3,7 +3,9 @@
     "allow": [
       "Bash(open index.html)",
       "Bash(node:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(cp:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

@@ -30,7 +30,7 @@ function createWindow() {
     },
     titleBarStyle: 'hiddenInset', // Mac-style title bar
     show: false, // Don't show until ready
-    icon: path.join(__dirname, 'app_icon.png')
+    icon: path.join(__dirname, 'app_icon.jpg')
   });
 
   // Load the app

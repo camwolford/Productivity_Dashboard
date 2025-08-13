@@ -17,7 +17,7 @@ const FILES_TO_SYNC = [
   'style.css',
   'package.json',
   'package-lock.json',
-  'app_icon.png'
+  'app_icon.jpg'
 ];
 
 // Directories to sync

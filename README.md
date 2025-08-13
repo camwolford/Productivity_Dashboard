@@ -173,7 +173,7 @@ Productivity_Dashboard/
 ├── script.js            # App logic (~3200 lines)
 ├── style.css            # Complete styling
 ├── package.json         # Dependencies & build config
-├── app_icon.png         # App icon source
+├── app_icon.jpg         # App icon source
 ├── assets/icon.icns     # macOS app icon
 ├── .gitignore           # Git ignore rules
 ├── CLAUDE.md            # Development documentation
