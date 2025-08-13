@@ -5,7 +5,9 @@
       "Bash(node:*)",
       "Bash(npm ls:*)",
       "Bash(cp:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(gh repo view:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
