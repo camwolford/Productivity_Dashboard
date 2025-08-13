@@ -294,6 +294,12 @@ ipcMain.handle('install-update', () => {
   return true;
 });
 
+ipcMain.handle('check-for-updates', () => {
+  console.log('Manual update check requested');
+  autoUpdater.checkForUpdatesAndNotify();
+  return true;
+});
+
 // Auto-updater will be configured after getting the token
 
 // Auto-updater events
@@ -339,21 +345,27 @@ autoUpdater.on('update-not-available', () => {
 // App event handlers
 app.whenReady().then(async () => {
   createWindow();
-  
-  // Configure auto-updater to use this public repository
-  autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: 'camwolford',
-    repo: 'Productivity_Dashboard'
-  });
-  console.log('Auto-updater configured for public repository');
-  
-  // Force update check in development for testing
-  if (process.env.NODE_ENV === 'development') {
-    autoUpdater.forceDevUpdateConfig = true;
-  }
-  autoUpdater.checkForUpdatesAndNotify();
   createMenu();
+  
+  // Configure auto-updater after window is ready
+  setTimeout(() => {
+    // Configure auto-updater to use this public repository
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'camwolford',
+      repo: 'Productivity_Dashboard'
+    });
+    console.log('Auto-updater configured for public repository');
+    
+    // Enable dev mode checking
+    if (process.env.NODE_ENV === 'development') {
+      autoUpdater.forceDevUpdateConfig = true;
+      autoUpdater.logger = console;
+    }
+    
+    console.log('Starting auto-update check...');
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 3000); // Wait 3 seconds after app is ready
 
   // Handle app activation (Mac)
   app.on('activate', () => {

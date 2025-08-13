@@ -1,6 +1,6 @@
 {
   "name": "productivity-dashboard",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "A sophisticated, project-based productivity management system designed for researchers and professionals who need to balance execution-focused work with incubation of future ideas.",
   "main": "main.js",
   "scripts": {
@@ -50,11 +50,11 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64"]
+          "arch": ["x64", "arm64"]
         },
         {
           "target": "zip", 
-          "arch": ["arm64"]
+          "arch": ["x64", "arm64"]
         }
       ],
       "icon": "assets/icon.icns"
