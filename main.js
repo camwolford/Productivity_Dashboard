@@ -1,5 +1,9 @@
 const { app, BrowserWindow, ipcMain, Notification, Menu } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
+
+// Keep user data in a stable location so information persists across updates
+app.setPath('userData', path.join(app.getPath('appData'), 'productivity-dashboard'));
 
 let mainWindow;
 let focusTimer = null;
@@ -285,11 +289,37 @@ ipcMain.handle('stop-pomodoro-timer', (event) => {
   return true;
 });
 
+// Auto-updater events
+autoUpdater.on('update-available', () => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-available');
+  }
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('download-progress', progress);
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-downloaded', info);
+  }
+});
+
+autoUpdater.on('error', (error) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-error', error ? error.message : 'unknown');
+  }
+});
+
 // App event handlers
 app.whenReady().then(() => {
   createWindow();
+  autoUpdater.checkForUpdatesAndNotify();
   createMenu();
-  
+
   // Handle app activation (Mac)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

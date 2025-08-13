@@ -27,6 +27,9 @@
     "electron": "^37.2.6",
     "electron-builder": "^26.0.12"
   },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  },
   "build": {
     "appId": "com.campbellwolford.productivity-dashboard",
     "productName": "Productivity Dashboard",
@@ -55,6 +58,13 @@
     },
     "dmg": {
       "title": "Productivity Dashboard"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "camwolford",
+        "repo": "Productivity_Dashboard"
+      }
+    ]
   }
 }

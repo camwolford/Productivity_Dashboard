@@ -48,6 +48,12 @@
 3. Drag the app to your Applications folder
 4. Launch from Applications or Spotlight
 
+### **Updating**
+1. The app checks for updates automatically on launch
+2. If an update is found, it downloads in the background
+3. You'll receive a notification and can restart to apply the update
+4. Your existing projects and settings are preserved between versions
+
 ### **Development Setup**
 ```bash
 # Install dependencies
