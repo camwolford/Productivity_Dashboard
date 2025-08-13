@@ -1,9 +1,32 @@
 const { app, BrowserWindow, ipcMain, Notification, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
+const { exec } = require('child_process');
 
 // Keep user data in a stable location so information persists across updates
 app.setPath('userData', path.join(app.getPath('appData'), 'productivity-dashboard'));
+
+// Function to get GitHub token for private repo access
+async function getGitHubToken() {
+  // First try environment variable
+  if (process.env.GITHUB_TOKEN) {
+    console.log('Using GitHub token from environment variable');
+    return process.env.GITHUB_TOKEN;
+  }
+  
+  // Try to get from macOS keychain
+  return new Promise((resolve) => {
+    exec('security find-generic-password -a "productivity-dashboard" -s "github-token" -w 2>/dev/null', (error, stdout) => {
+      if (error) {
+        console.log('No GitHub token found in keychain or environment. Auto-updates will not work for private repository.');
+        resolve('');
+      } else {
+        console.log('Using GitHub token from keychain');
+        resolve(stdout.trim());
+      }
+    });
+  });
+}
 
 let mainWindow;
 let focusTimer = null;
@@ -289,6 +312,8 @@ ipcMain.handle('stop-pomodoro-timer', (event) => {
   return true;
 });
 
+// Auto-updater will be configured after getting the token
+
 // Auto-updater events
 autoUpdater.on('update-available', () => {
   if (mainWindow) {
@@ -309,14 +334,40 @@ autoUpdater.on('update-downloaded', (info) => {
 });
 
 autoUpdater.on('error', (error) => {
+  console.error('Auto-updater error:', error);
   if (mainWindow) {
     mainWindow.webContents.send('update-error', error ? error.message : 'unknown');
   }
 });
 
+// Add debug logging for auto-updater
+autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for update...');
+});
+
+autoUpdater.on('update-not-available', () => {
+  console.log('Update not available.');
+});
+
 // App event handlers
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
+  
+  // Configure auto-updater with GitHub token for private repo
+  const token = await getGitHubToken();
+  if (token) {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'camwolford',
+      repo: 'Productivity_Dashboard',
+      private: true,
+      token: token
+    });
+    console.log('Auto-updater configured for private repository');
+  } else {
+    console.log('No GitHub token available. Auto-updates disabled for private repository.');
+  }
+  
   autoUpdater.checkForUpdatesAndNotify();
   createMenu();
 
