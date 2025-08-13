@@ -41,11 +41,11 @@
 ## 🚀 Getting Started
 
 ### **Installation**
-1. Download the appropriate DMG file:
-   - Intel Macs: `Productivity Dashboard-1.0.0.dmg`
-   - Apple Silicon Macs: `Productivity Dashboard-1.0.0-arm64.dmg`
-2. Double-click the DMG file
-3. Drag the app to your Applications folder
+1. **Download the latest version** from [GitHub Releases](https://github.com/camwolford/Productivity_Dashboard/releases/latest)
+   - Intel Macs: Download the `.dmg` file (x64 architecture)
+   - Apple Silicon Macs: Download the `-arm64.dmg` file (ARM64 architecture)
+2. Double-click the downloaded DMG file
+3. Drag the Productivity Dashboard app to your Applications folder
 4. Launch from Applications or Spotlight
 
 ### **Auto-Update System**
@@ -53,52 +53,24 @@
 The app includes a sophisticated auto-update system powered by `electron-updater` that keeps your productivity dashboard current with the latest features and fixes.
 
 #### **How Updates Work**
-1. **Automatic Check**: App checks for updates on every launch
+1. **Automatic Check**: App automatically checks for updates on every launch
 2. **Background Download**: Updates download silently without interrupting your work
-3. **User Notification**: You receive a native notification when an update is ready
-4. **One-Click Install**: Click "Restart and Update" to apply the new version
-5. **Data Preservation**: All projects, tasks, and settings are automatically preserved
+3. **Native Notification**: You receive a system notification when an update is ready to install
+4. **One-Click Install**: Click "Restart and Update" to seamlessly apply the new version
+5. **Data Preservation**: All your projects, tasks, focus history, and settings are automatically preserved
 
-#### **Update Process Details**
-- **Update Server**: GitHub Releases serves as the update distribution system
-- **Delta Updates**: Only changed files are downloaded to minimize bandwidth usage
-- **Automatic Rollback**: If an update fails, the app automatically reverts to the previous version
-- **No Interruption**: Focus sessions and timers continue running during update checks
+#### **Update Features**
+- **GitHub Releases**: Updates are distributed through [GitHub Releases](https://github.com/camwolford/Productivity_Dashboard/releases)
+- **Efficient Downloads**: Only changed files are downloaded to save bandwidth
+- **Seamless Experience**: Focus sessions and timers continue running during update checks
+- **No Manual Steps**: Once installed, the app keeps itself updated automatically
 
-#### **For Developers: Publishing Updates**
-To release a new version that triggers auto-updates:
+#### **Manual Update Check**
+While the app checks automatically, you can also:
+- Check for updates manually by restarting the app
+- Download the latest version from [releases page](https://github.com/camwolford/Productivity_Dashboard/releases) if needed
 
-1. **Update Version**: Increment version in `package.json`
-2. **Build Release**: Run `npm run build-mac` to create DMG files
-3. **Create GitHub Release**:
-   ```bash
-   # Tag the release
-   git tag v1.1.0
-   git push origin v1.1.0
-   
-   # Create release on GitHub
-   gh release create v1.1.0 \
-     "dist/Productivity Dashboard-1.1.0.dmg" \
-     "dist/Productivity Dashboard-1.1.0-arm64.dmg" \
-     "dist/latest-mac.yml" \
-     --title "v1.1.0: New Features" \
-     --notes "Release notes here"
-   ```
-4. **Automatic Distribution**: Published releases are automatically detected by existing app installations
-
-#### **Update Configuration**
-The auto-updater is configured in `package.json`:
-```json
-"publish": [
-  {
-    "provider": "github",
-    "owner": "camwolford",
-    "repo": "Productivity_Dashboard"
-  }
-]
-```
-
-This ensures all users receive updates seamlessly while maintaining the native desktop app experience.
+**All updates are free and preserve your data perfectly.** 🔄
 
 ### **Development Setup**
 ```bash
@@ -111,9 +83,11 @@ npm run dev
 # Run in production mode
 npm start
 
-# Build new DMG files
-npm run build-mac
+# Build macOS distribution files
+npm run build:mac
 ```
+
+For developers publishing updates, the app is configured to automatically distribute through GitHub Releases. See the [releases page](https://github.com/camwolford/Productivity_Dashboard/releases) for version history.
 
 ### **First Time Setup**
 1. Create your first project using the **New Project** button
@@ -153,10 +127,10 @@ The `node_modules/` folder contains development dependencies but is excluded fro
 npm install  # Recreates node_modules from package-lock.json
 ```
 
-### **Building**
-- `npm run build-mac` creates universal DMG files for both Intel and Apple Silicon Macs
-- Built apps are code-signed (though unsigned in development)
-- DMG files are ready for distribution
+### **Building & Distribution**
+- `npm run build:mac` creates universal DMG and ZIP files for both Intel and Apple Silicon Macs
+- Built apps include auto-update configuration for seamless updates
+- Distribution files are published through [GitHub Releases](https://github.com/camwolford/Productivity_Dashboard/releases)
 
 ## 🎉 Mission Accomplished
 
