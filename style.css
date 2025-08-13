@@ -2619,6 +2619,20 @@ body {
   visibility: hidden;
 }
 
+/* Update notice banner */
+.update-notice {
+  background: #fff3cd;
+  color: #856404;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.update-notice.hidden {
+  display: none;
+}
+
 .heatmap-cell[data-level="0"] {
   background: var(--card-background-secondary);
 }

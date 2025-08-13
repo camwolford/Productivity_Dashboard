@@ -263,8 +263,15 @@ To test the pause/resume functionality:
 
 ### Key Technical Changes
 - **CSS Classes**: Added professional styling classes for consistency
-- **Modal System**: Unified all task operations under professional modal interface  
+- **Modal System**: Unified all task operations under professional modal interface
 - **Event Handling**: Streamlined button event delegation
 - **Focus Mode**: Fixed redirect issues when adding/editing tasks
+
+## Recent Improvements (2025-08-17)
+
+### Auto-Update Token Handling
+**Location**: `main.js:360-388`, `index.html:24-26`, `script.js:35-44`, `style.css:2623-2633`
+- Auto-updater now falls back to public GitHub releases when no token is present
+- Renderer displays a banner when updates are disabled, clarifying tokens are only needed for private builds
 
 This living document approach ensures future Claude instances have accurate, up-to-date context about the codebase and can work more effectively without having to rediscover patterns and structures.
