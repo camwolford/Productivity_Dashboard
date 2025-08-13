@@ -104,12 +104,11 @@ This ensures all users receive updates seamlessly while maintaining the native d
 For private repositories (like this one), additional authentication is required:
 
 1. **Create GitHub Personal Access Token**:
-   - Go to [GitHub Settings → Tokens](https://github.com/settings/tokens)
-   - Click "Generate new token (classic)"
-   - Name: "Productivity Dashboard Auto-Update" 
-   - Permissions needed:
-     - ✅ **repo** (Full control of private repositories)
-     - ✅ **read:packages** (Download packages)
+   - Go to [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/personal-access-tokens/new)
+   - Click "Generate new token" (fine-grained recommended)
+   - Name: "Productivity Dashboard Auto-Update"
+   - Repository access: **Only selected repositories** → choose `Productivity_Dashboard`
+   - Repository permissions: set **Contents** and **Metadata** to **Read-only**
    - Generate and copy the token immediately
 
 2. **Configure Authentication** (choose one method):
@@ -118,7 +117,7 @@ For private repositories (like this one), additional authentication is required:
    ```bash
    ./setup-github-token.sh
    ```
-   Enter your token when prompted. It's stored securely in macOS keychain.
+   Enter your token when prompted. The script validates it has read access to the repository and stores it securely in macOS keychain.
 
    **Method B: Environment Variable**
    ```bash
@@ -133,8 +132,8 @@ For private repositories (like this one), additional authentication is required:
 
 #### **Security & Privacy**
 - **No Token Storage in Code**: Token never appears in source code or config files
-- **Keychain Encryption**: macOS keychain provides secure, encrypted storage  
-- **Minimal Permissions**: App only requests necessary GitHub permissions
+- **Keychain Encryption**: macOS keychain provides secure, encrypted storage
+- **Minimal Permissions**: Use a fine-grained, read-only token scoped to the update repository
 - **Token Management**: Revoke anytime from GitHub settings if needed
 
 #### **Troubleshooting Auto-Updates**
