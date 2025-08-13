@@ -1,14 +1,15 @@
 {
   "name": "productivity-dashboard",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "A sophisticated, project-based productivity management system designed for researchers and professionals who need to balance execution-focused work with incubation of future ideas.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
     "build": "electron-builder",
-    "build-mac": "electron-builder --mac",
+    "build:mac": "electron-builder --mac",
     "dist": "npm run build",
+    "deploy": "node deploy.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -47,23 +48,28 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "target": {
-        "target": "dmg",
-        "arch": [
-          "x64",
-          "arm64"
-        ]
-      },
-      "icon": "app_icon.png"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64"]
+        },
+        {
+          "target": "zip", 
+          "arch": ["arm64"]
+        }
+      ],
+      "icon": "assets/icon.icns"
     },
     "dmg": {
-      "title": "Productivity Dashboard"
+      "title": "Productivity Dashboard",
+      "internetEnabled": false,
+      "sign": false
     },
     "publish": [
       {
         "provider": "github",
         "owner": "camwolford",
-        "repo": "Productivity_Dashboard"
+        "repo": "productivity-dashboard-public"
       }
     ]
   }

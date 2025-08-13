@@ -1,32 +1,9 @@
 const { app, BrowserWindow, ipcMain, Notification, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
-const { exec } = require('child_process');
 
 // Keep user data in a stable location so information persists across updates
 app.setPath('userData', path.join(app.getPath('appData'), 'productivity-dashboard'));
-
-// Function to get GitHub token for private repo access
-async function getGitHubToken() {
-  // First try environment variable
-  if (process.env.GITHUB_TOKEN) {
-    console.log('Using GitHub token from environment variable');
-    return process.env.GITHUB_TOKEN;
-  }
-  
-  // Try to get from macOS keychain
-  return new Promise((resolve) => {
-    exec('security find-generic-password -a "productivity-dashboard" -s "github-token" -w 2>/dev/null', (error, stdout) => {
-      if (error) {
-        console.log('No GitHub token found in keychain or environment. Auto-updates will only work for public releases.');
-        resolve('');
-      } else {
-        console.log('Using GitHub token from keychain');
-        resolve(stdout.trim());
-      }
-    });
-  });
-}
 
 let mainWindow;
 let focusTimer = null;
@@ -363,30 +340,13 @@ autoUpdater.on('update-not-available', () => {
 app.whenReady().then(async () => {
   createWindow();
   
-  // Configure auto-updater with GitHub token for private repo
-  const token = await getGitHubToken();
-  if (token) {
-    // Set token in environment for electron-updater
-    process.env.GH_TOKEN = token;
-    
-    autoUpdater.setFeedURL({
-      provider: 'github',
-      owner: 'camwolford',
-      repo: 'Productivity_Dashboard',
-      private: true
-    });
-    console.log('Auto-updater configured for private repository with token');
-  } else {
-    autoUpdater.setFeedURL({
-      provider: 'github',
-      owner: 'camwolford',
-      repo: 'Productivity_Dashboard'
-    });
-    mainWindow.webContents.on('did-finish-load', () => {
-      mainWindow.webContents.send('updates-disabled');
-    });
-    console.log('No GitHub token available. Auto-updates limited to public releases.');
-  }
+  // Configure auto-updater to use public distribution repository
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'camwolford',
+    repo: 'productivity-dashboard-public'
+  });
+  console.log('Auto-updater configured for public distribution repository');
   
   // Force update check in development for testing
   if (process.env.NODE_ENV === 'development') {
